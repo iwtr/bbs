@@ -40,8 +40,8 @@ class Model {
 
 		$sql = "insert into comment(board_id, comnum, user_id, del_key, pen_name, contents) values('$board_id', '$comnum', '$user_id', '$del_key', '$pen_name', '$contents');";
 		$result = mysqli_query($connect, $sql) or die('データを登録できませんでした。');
-		$comment_id = last_comment_id($board_id);
-		image_upload($comment_id);
+		$comment_id = $this->last_comment_id($board_id);
+		$this->image_upload($comment_id);
 
 	}
 
@@ -88,7 +88,7 @@ class Model {
 		$sql = "update comment set contents='$newcomm' where id='$comment_id';";
 		$result = mysqli_query($connect, $sql);
 		if($_FILES['image']['error'] == 0) {
-			image_upload($comment_id);
+			$this->image_upload($comment_id);
 		}
 		if($img_del) {
 			$sql = "update comment set image='' where id='$comment_id';";
@@ -107,6 +107,7 @@ class Model {
 	//トピック追加
 	public function addtopic($title, $contents, $del_key) {
 		global $connect;
+		
 		//トピック作成
 		$sql = "insert into board(title, del_key) values('$title', '$del_key');";
 		$result = mysqli_query($connect, $sql) or die('トピックを作成できませんでした。');
@@ -116,7 +117,7 @@ class Model {
 		$board_id = mysqli_fetch_array($result);
 
 		//コメント追加
-		addcomment($board_id['id'], $contents, $del_key);
+		$this->addcomment($board_id['id'], $contents, $del_key);
 
 		return $board_id['id'];
 	}
@@ -140,9 +141,6 @@ class Model {
 		global $connect;
 
 		$sql = "delete board, comment from board, comment where board.id='$board_id' and comment.board_id='$board_id';";
-		//$sql = "delete from board where id='$board_id';";
-		//$result = mysqli_query($connect, $sql);
-		//$sql = "delete from comment where board_id='$board_id';";
 		$result = mysqli_query($connect, $sql);
 
 
@@ -195,8 +193,11 @@ class Model {
 		global $connect;
 		$sql = "select id, comnum, user_id, pen_name, contents, image, created_at from comment where board_id='$board_id' order by id;";
 		$result = mysqli_query($connect, $sql);
+		while($row = mysqli_fetch_array($result)) {
+			$comments[] = $row;
+		}
 
-		return $result;
+		return $comments;
 	}
 
 	//title取得
@@ -284,6 +285,29 @@ class Model {
 		}
 		return $bool;
 	}
+	
+	//ログイン処理
+	public function check_login($login_id, $password) {
+		global $connect;
+		if(!empty($login_id) && !empty($password)){
+			$sql = "select id, name from users where login_id='$login_id' and password='$password';";
+			$result = mysqli_query($connect, $sql);
+			if(mysqli_num_rows($result) == 1){
+				$row = mysqli_fetch_array($result);
+				setcookie('id', $row['id'], 0);
+				setcookie('name', $row['name'], 0);
+			}
+			else {
+				$_SESSION['err'] = 'login_err_1';
+			}
+		}
+		else {
+			$_SESSION['err'] = 0;
+		}
+	}
+	
+	
+	
+	
 }
-
 ?>
