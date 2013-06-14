@@ -9,15 +9,14 @@
 <body>
 	<input type="button" onClick="location.href='index.php';" value="掲示板一覧に戻る">
 	<div style="text-align: right; margin: 0px auto; width: 900px;">
-		<?php if(isset($_COOKIE['name'])) { ?><a href="keijiban_logout.php">ログアウト</a>
-		<?php } else { ?><a href="keijiban_login.html">ログイン</a> <?php } ?>
+		<?php $view->FormLoginView(); ?>
 	</div>
 	<div style="background-color: #eee; margin: 0px auto; padding: 10px; width: 900px;">
 		<div style="text-align: center; color: red; font-size: 20px;">
 			<?php echo $model->get_title($board_id); ?>
 			
 			<div style="display: inline-block; float: right;">
-				<form method="POST" action="index?request=delete_topic">
+				<form method="POST" action="index?request=delete">
 					<input type="hidden" name="board_id" value="<?php echo $board_id; ?>">
 					<input type="submit" name="check_delete_topic" value="削除">
 				</form>
@@ -72,7 +71,7 @@
 								<input type="hidden" name="comment_id" value="<?php echo $row['id']; ?>">
 								<input type="submit" name="check_update" value="更新">
 							</form>
-							<form style="display: inline;" method="POST" action="index?request=delete_comment">
+							<form style="display: inline;" method="POST" action="index?request=delete">
 								<input type="hidden" name="comment_id" value="<?php echo $row['id']; ?>">
 								<input type="submit" name="check_delete_comment" value="削除">
 							</form>

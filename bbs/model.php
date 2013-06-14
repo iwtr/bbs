@@ -42,8 +42,10 @@ class Model {
 		$result = mysqli_query($connect, $sql) or die('データを登録できませんでした。');
 		$comment_id = $this->last_comment_id($board_id);
 		$this->image_upload($comment_id);
-
+		$this->last_updated($board_id);
 	}
+	
+	
 
 	//画像アップロード
 	public function image_upload($comment_id) {
@@ -94,6 +96,8 @@ class Model {
 			$sql = "update comment set image='' where id='$comment_id';";
 			$result = mysqli_query($connect, $sql);
 		}
+		$board_id = $this->cid_to_bid($comment_id);
+		$this->last_updated($board_id);
 	}
 
 	//レコード削除
@@ -121,17 +125,24 @@ class Model {
 
 		return $board_id['id'];
 	}
-
+	
 	//トピック検索
-	public function find($str) {
+	public function find_topic($str) {
 		global $connect;
 		$str = mysqli_real_escape_string($connect, $str);
 		echo 'str=' . $str;
-		$sql = "select title from board where title like '%$str%';";
+		$sql = "select id, title, last_updated from board where title like '%$str%';";
 		$result = mysqli_query($connect, $sql);
-		//$row = mysqli_fetch_array($result);
-
-		return $result;
+		
+		while($row = mysqli_fetch_array($result)) {
+			$boards[] = $row;
+		}
+		if($boards == NULL){
+			$_SESSION['err'] = 51;
+			$boards = array();
+		}
+		
+		return $boards;
 	}
 
 
@@ -146,10 +157,10 @@ class Model {
 
 	}
 
-	//全てのboard取得 *
+	//全てのboard取得
 	public function get_boards() {
 		global $connect;
-		$sql = "select id, title from board;";
+		$sql = "select id, title, last_updated from board order by last_updated desc;";
 		$result = mysqli_query($connect, $sql);
 		
 		while($row = mysqli_fetch_array($result)) {
@@ -268,7 +279,7 @@ class Model {
 			$result = mysqli_query($connect, $sql);
 		}
 		else {
-			$_SESSION['err'] = 'signup_err_2';
+			$_SESSION['err'] = 22;
 			return FALSE;
 		}
 		return TRUE;
@@ -279,6 +290,16 @@ class Model {
 		global $connect;
 		$bool = FALSE;
 		$sql = "select id from comment where id='$comment_id' and del_key='$del_key';";
+		$result = mysqli_query($connect, $sql);
+		if(mysqli_num_rows($result) == 1) {
+			$bool = TRUE;
+		}
+		return $bool;
+	}
+	public function check_topic_del_key($board_id, $del_key) {
+		global $connect;
+		$bool = FALSE;
+		$sql = "select id from board where id='$board_id' and del_key='$del_key';";
 		$result = mysqli_query($connect, $sql);
 		if(mysqli_num_rows($result) == 1) {
 			$bool = TRUE;
@@ -298,7 +319,7 @@ class Model {
 				setcookie('name', $row['name'], 0);
 			}
 			else {
-				$_SESSION['err'] = 'login_err_1';
+				$_SESSION['err'] = 11;
 			}
 		}
 		else {
@@ -306,7 +327,13 @@ class Model {
 		}
 	}
 	
-	
+	//boardの最終更新日時を書き換え
+	public function last_updated($board_id) {
+		global $connect;
+		
+		$sql = "update board set last_updated=now() where id='$board_id';";
+		$result = mysqli_query($connect, $sql);
+	}
 	
 	
 }

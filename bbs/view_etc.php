@@ -1,6 +1,6 @@
 <?php
 
-class View{
+class View {
 	
 	public function MenuView() {
 		?>
@@ -9,7 +9,6 @@ class View{
 				<tr>
 					<td><a href="index?request=find">トピック検索</a></td>
 					<td><a href="index?request=signup">ユーザー登録</a></td>
-					<td><a href="index?request=logout">ログアウト</a></td>
 				</tr>
 			</tbody>
 		</table>
@@ -19,7 +18,8 @@ class View{
 	public function FormLoginView() {
 		if(!isset($_COOKIE['name'])) {
 		?>
-		<div id="b" style="display: table;">
+		<div id="b" style="display: inline-table; text-align: right;">
+			<div style="text-align: left;">ログインフォーム<br></div>
 			<?php error(); ?>
 			<form method="POST" action="index?request=login">
 				<label>ID:</label><input type="text" name="login_id"><br>
@@ -34,7 +34,8 @@ class View{
 		}
 		else {
 			?>
-			<span>ユーザー名：<?php echo $_COOKIE['name']; ?> でログイン中</span>
+			<span>ユーザー名：<?php echo $_COOKIE['name']; ?> でログイン中<br>
+			<a href="index?request=logout">ログアウト</a></span>
 			<?php
 		}
 	}
@@ -83,6 +84,40 @@ class View{
 		<?php
 	}
 	
-}
+	public function FormFindView() {
+		?>
+		<form method="GET" action="index.php">
+			<input type="hidden" name="request" value="find">
+			<label>検索文字列：</label><input type="text" name="str">
+			<input type="submit" name="search" value="検索">
+		</form>
+		<?php
+	}
 
+	public function BoardsView($boards) {
+		?>
+		<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
+			<thead>
+				<tr>
+					<td>タイトル</td>
+					<td>コメント数</td>
+					<td>最終投稿日時</td>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ($boards as $row) { ?>
+					<tr>
+						<td><?php echo '<a href="index?request=board&board_id='. $row['id'] .'">' . $row['title'] . '</a>'; ?></td>
+						<td><?php //echo $model->comment_count($row['id']); //関数はビューの外で ?></td>
+						<td><?php echo $row['last_updated']; ?></td>
+					</tr>
+				<?php } ?>
+			</tbody>
+		</table>
+		<?php
+	}
+	
+	
+}
+//管理画面を作る
 ?>
