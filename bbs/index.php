@@ -3,6 +3,7 @@ mb_http_output("UTF-8");
 mb_internal_encoding("UTF-8");
 
 require_once 'controller.php';
+require_once 'view_etc.php';
 
 if(isset($_GET['request'])) {
 	$request = $_GET['request'];
@@ -95,7 +96,37 @@ switch ($request) {
 			$signupcontroller->signupAction();
 		}
 		else {
-			require_once 'view_signup.php';
+			page_title("ユーザー登録", 'FormSignupView');
+		}
+		break;
+	
+	//ユーザー削除
+	case 'user_del':
+		if(isset($_POST['delete_user'])) {
+			$userdelcontroller = new UserDelController();
+			$userdelcontroller->userdelAction();
+		}
+		else {
+			$view = new View();
+			$view->UserDelete();
+		}
+		break;
+	
+	//管理者用
+	case 'admin':
+		$admincontroller = new AdminController();
+		if(isset($_GET['logout'])) {
+			$admincontroller->adminlogoutAction();
+		}
+		else if(isset($_COOKIE['admin_name'])) {
+			$admincontroller->adminAction();
+		}
+		else if(isset($_POST['admin_login'])) {
+			$admincontroller->adminloginAction();
+		}
+		else {
+			$view = new View();
+			page_title("管理者用ログイン", 'FormAdminLogin');
 		}
 		break;
 	

@@ -27,7 +27,7 @@ class Model {
 		else {
 			$user_id = NULL;
 		}
-
+		
 		$sql = "select max(comnum) from comment where board_id='$board_id';";
 		$result = mysqli_query($connect, $sql);
 		if(mysqli_num_rows($result) != 0) {
@@ -81,6 +81,8 @@ class Model {
 		$sql = "select id, contents, image from comment where id='$id';";
 		$result = mysqli_query($connect, $sql);
 		$row = mysqli_fetch_array($result);
+		$row['contents'] = nl2br($row['contents']);
+		$row['img'] = $this->image_exist($row['id']);
 		return $row;
 	}
 
@@ -130,16 +132,12 @@ class Model {
 	public function find_topic($str) {
 		global $connect;
 		$str = mysqli_real_escape_string($connect, $str);
-		echo 'str=' . $str;
+		echo '"' . $str . '" で検索しました。<br>';
 		$sql = "select id, title, last_updated from board where title like '%$str%';";
 		$result = mysqli_query($connect, $sql);
 		
 		while($row = mysqli_fetch_array($result)) {
 			$boards[] = $row;
-		}
-		if($boards == NULL){
-			$_SESSION['err'] = 51;
-			$boards = array();
 		}
 		
 		return $boards;
@@ -164,6 +162,11 @@ class Model {
 		$result = mysqli_query($connect, $sql);
 		
 		while($row = mysqli_fetch_array($result)) {
+			$board_id = $row['id'];
+			$sql = "select count(board_id) from comment where board_id='$board_id';";
+			$result2 = mysqli_query($connect, $sql);
+			$count = mysqli_fetch_row($result2); //数値添字の配列で返される
+			$row['count'] = $count[0];
 			$boards[] = $row;
 		}
 		return $boards;
@@ -202,9 +205,23 @@ class Model {
 	//board内のコメント関連データ取得
 	public function show_comments($board_id) {
 		global $connect;
-		$sql = "select id, comnum, user_id, pen_name, contents, image, created_at from comment where board_id='$board_id' order by id;";
+		$sql = "select id,  user_id, pen_name, contents, image, created_at from comment where board_id='$board_id' order by id;";
 		$result = mysqli_query($connect, $sql);
 		while($row = mysqli_fetch_array($result)) {
+			if(!empty($row['user_id'])) {
+				$row['user_name'] = '【' . $this->user_id_to_name($row['user_id']) . '】';
+			}
+			else if(!empty($row['pen_name'])) {
+				$row['user_name'] = $row['pen_name'];
+			}
+			else {
+				$row['user_name'] = '名無し';
+			}
+			
+			$row['contents'] = nl2br($row['contents']);
+			
+			$row['img'] = $this->image_exist($row['id']);
+			
 			$comments[] = $row;
 		}
 
@@ -279,10 +296,18 @@ class Model {
 			$result = mysqli_query($connect, $sql);
 		}
 		else {
-			$_SESSION['err'] = 22;
+			$_SESSION['err_signup'] = 22;
 			return FALSE;
 		}
 		return TRUE;
+	}
+	
+	//ユーザー削除
+	public function user_delete($user_id) {
+		global $connect;
+		
+		$sql = "delete from users where id='$user_id';";
+		$result = mysqli_query($connect, $sql);
 	}
 
 	//del_keyが正しいか
@@ -310,20 +335,15 @@ class Model {
 	//ログイン処理
 	public function check_login($login_id, $password) {
 		global $connect;
-		if(!empty($login_id) && !empty($password)){
-			$sql = "select id, name from users where login_id='$login_id' and password='$password';";
-			$result = mysqli_query($connect, $sql);
-			if(mysqli_num_rows($result) == 1){
-				$row = mysqli_fetch_array($result);
-				setcookie('id', $row['id'], 0);
-				setcookie('name', $row['name'], 0);
-			}
-			else {
-				$_SESSION['err'] = 11;
-			}
+		$sql = "select id, name from users where login_id='$login_id' and password='$password';";
+		$result = mysqli_query($connect, $sql);
+		if(mysqli_num_rows($result) == 1){
+			$row = mysqli_fetch_array($result);
+			setcookie('id', $row['id'], 0);
+			setcookie('name', $row['name'], 0);
 		}
 		else {
-			$_SESSION['err'] = 0;
+			$_SESSION['err_login'] = 11;
 		}
 	}
 	
@@ -335,6 +355,29 @@ class Model {
 		$result = mysqli_query($connect, $sql);
 	}
 	
+	//管理者ログイン IDパスワード照合
+	public function admin_login_check($login_id, $password) {
+		global $connect;
+		$sql = "select id, name from admins where login_id='$login_id' and password='$password';";
+		$result = mysqli_query($connect, $sql);
+		if(mysqli_num_rows($result) == 1){
+			$row = mysqli_fetch_array($result);
+			setcookie('admin_id', $row['id'], 0);
+			setcookie('admin_name', $row['name'], 0);
+		}
+		else {
+			$_SESSION['err_admin'] = 102;
+		}
+		return $login;
+	}
+	
+	public function old_topic_del() {
+		global $connect;
+
+	}
+}
+
+class AdminModel extends Model {
 	
 }
 ?>

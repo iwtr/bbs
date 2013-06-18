@@ -1,19 +1,21 @@
-
 <!DOCTYPE HTML>
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<title>掲示板_表示</title>
-	<link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-	<input type="button" onClick="location.href='index.php';" value="掲示板一覧に戻る">
+	<div style="text-align: center;">
+		<input type="button" onClick="location.href='index.php';" value="掲示板一覧に戻る">
+	</div>
+	
 	<div style="text-align: right; margin: 0px auto; width: 900px;">
 		<?php $view->FormLoginView(); ?>
 	</div>
+	
 	<div style="background-color: #eee; margin: 0px auto; padding: 10px; width: 900px;">
 		<div style="text-align: center; color: red; font-size: 20px;">
-			<?php echo $model->get_title($board_id); ?>
+			<?php echo $title; ?>
 			
 			<div style="display: inline-block; float: right;">
 				<form method="POST" action="index?request=delete">
@@ -35,18 +37,7 @@
 								<?php echo $i; ?>
 							</div>
 							<div style="float: left;">
-								名前：
-									<?php
-									if(!empty($row['user_id'])) {
-										echo '【' . $model->user_id_to_name($row['user_id']) . '】';
-									}
-									else if(!empty($row['pen_name'])) {
-										echo $row['pen_name'];
-									}
-									else {
-										echo '名無し';
-									}
-									?>
+								名前：<?php echo $row['user_name']; ?>
 							</div>
 							<div style="float: right;">
 								投稿日時：<?php echo $row['created_at']; ?>
@@ -55,14 +46,10 @@
 					</tr>
 					<tr>
 						<td style="word-break: break-all; padding: 10px 20px 0px; max-width: 600px;">
-							<?php
-							$str = nl2br($row['contents']);
-							echo $str;
-							?>
-							
+							<?php echo $row['contents']; ?>
 						</td>
 						<td style="max-height: 150px; width: 200px;">
-							<?php if($model->image_exist($row['id'])) { echo '<img style="max-height: 150px; max-width:200px;" src="image/' . $row['image'] . '">'; } ?>
+							<?php if($row['img']) { echo '<img style="max-height: 150px; max-width:200px;" src="image/' . $row['image'] . '">'; } ?>
 						</td>
 					</tr>
 					<tr>

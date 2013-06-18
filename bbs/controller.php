@@ -1,40 +1,41 @@
 <?php
 session_start();
 
+header("Content-type: text/html; charset=utf-8");
+
 require_once 'model.php';
-require_once 'view_etc.php';
 
 //トップ画面表示
 class TopController {
 
 	public function indexAction() {
 		$model = new Model();
+		$boards = array();
+		
 		$boards = $model->get_boards();
 		$view = new View();
-		if($boards == NULL){
-			$boards = array();
-		}
 		require_once 'view_top.php';
 	}
 }
 
 //内容表示
 class BoardController {
-	public $model;
-	public $view;
 	
 	public function contentsAction() {
-		$board_id = $_GET['board_id'];
 		$model = new Model();
 		$view = new View();
+		$board_id = $_GET['board_id'];
+		
+		$title = $model->get_title($board_id);
 		$comments = $model->show_comments($board_id);
+		
+		
 		require_once 'view_board.php';
 	}
 }
 
 //追加
 class AddController {
-	public $model;
 	
 	public function addtopicAction() {
 		global $connect;
@@ -49,16 +50,16 @@ class AddController {
 				$contents = mysqli_real_escape_string($connect, trim($_POST['contents']));
 				
 				$model = new Model();
-				$board_id = $model->addtopic($title, $contents, $del_key);
+				$board_id = $model->addtopic(htmlspecialchars($title), htmlspecialchars($contents), $del_key);
 				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
 				exit();
 			}
 			else {
-				//del_keyが英数字以外
+				$_SESSION['err_topic'] = 98;
 			}
 		}
 		else {
-			$_SESSION['err'] = 41;
+			$_SESSION['err_topic'] = 41;
 		}
 		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
 		exit();
@@ -76,14 +77,14 @@ class AddController {
 				$contents = mysqli_real_escape_string($connect, trim($_POST['contents']));
 				
 				$model = new Model();
-				$model->addcomment($board_id, $contents, $del_key);
+				$model->addcomment($board_id, htmlspecialchars($contents), $del_key);
 			}
 			else {
-				//削除キーが英数字以外
+				$_SESSION['err_comment'] = 98;
 			}
 		}
 		else {
-			$_SESSION['err'] = 31;
+			$_SESSION['err_comment'] = 31;
 		}
 		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
 		exit();
@@ -92,19 +93,24 @@ class AddController {
 
 //更新
 class UpdateController {
-	public $model;
 
 	public function checkAction() {
 		$model = new Model();
-		$comment_id = $_POST['comment_id'];
-		$row = $model->check_comment($comment_id); //array(id, contents, image)
+		$view = new View();
 		
-		require_once 'view_check.php';
+		$comment_id = $_POST['comment_id'];
+		$row = $model->check_comment($comment_id);
+		$page_title = "更新";
+		require_once 'header.php';
+		$view->UpdateDeleteCheckView($row);
+		$view->FormUpdateView($row);
+		require_once 'footer.php';
 	}
 	
 	public function updateAction() {
 		global $connect;
 		$model = new Model();
+		$view = new View();
 		
 		$del_key = $_POST['del_key'];
 		$comment_id = $_POST['comment_id'];
@@ -122,11 +128,13 @@ class UpdateController {
 			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
 		}
 		else {
-			$_SESSION['err'] = 99;
-			$_SESSION['update_again'] =TRUE;
+			$_SESSION['err_delete'] = 99;
 			$row = $model->check_comment($_POST['comment_id']);
-			require_once 'view_check.php';
-			unset($_SESSION['update_again']);
+			$page_title = "更新";
+			require_once 'header.php';
+			$view->UpdateDeleteCheckView($row);
+			$view->FormUpdateView($row);
+			require_once 'footer.php';
 		}
 		exit();
 	}
@@ -134,18 +142,21 @@ class UpdateController {
 
 //削除
 class DeleteController {
-	public $model;
 	
 	public function check_topic_deleteAction() {
 		$model = new Model();
-		
+		$view = new View();
 		$board_id = $_POST['board_id'];
 		$title = $model->get_title($board_id);
-		require_once 'view_check.php';
+		$page_title = "トピック削除";
+		require_once 'header.php';
+		$view->FormTopicDeleteView($title, $board_id);
+		require_once 'footer.php';
 	}
 	
 	public function topic_deleteAction() {
 		$model = new Model();
+		$view = new View();
 		
 		$board_id = $_POST['board_id'];
 		$del_key = $_POST['del_key'];
@@ -156,23 +167,30 @@ class DeleteController {
 		}
 		else {
 			$title = $model->get_title($board_id);
-			$_SESSION['err'] = 99;
-			$_SESSION['delete_topic_again'] =TRUE;
-			require_once 'view_check.php';
-			unset($_SESSION['delete_topic_again']);
+			$_SESSION['err_delete'] = 99;
+			$page_title = "トピック削除";
+			require_once 'header.php';
+			$view->FormTopicDeleteView($title, $board_id);
+			require_once 'footer.php';
 		}
 	}
 	
 	public function check_comment_deleteAction() {
 		$model = new Model();
+		$view = new View();
 		
 		$comment_id = $_POST['comment_id'];
 		$row = $model->check_comment($comment_id);
-		require_once 'view_check.php';
+		$page_title = "コメント削除";
+		require_once 'header.php';
+		$view->UpdateDeleteCheckView($row);
+		$view->FormCommentDeleteView($row);
+		require_once 'footer.php';
 	}
 	
 	public function comment_deleteAction() {
 		$model = new Model();
+		$view = new View();
 		
 		$comment_id = $_POST['comment_id'];
 		$del_key = $_POST['del_key'];
@@ -189,55 +207,66 @@ class DeleteController {
 		}
 		else {
 			$row = $model->check_comment($comment_id);
-			$_SESSION['err'] = 99;
-			$_SESSION['delete_comment_again'] = TRUE;
-			require_once 'view_check.php';
-			unset($_SESSION['delete_comment_again']);
+			$_SESSION['err_delete'] = 99;
+			$page_title = "コメント削除";
+			require_once 'header.php';
+			$view->UpdateDeleteCheckView($row);
+			$view->FormCommentDeleteView($row);
+			require_once 'footer.php';
 		}
 	}
 }
 
 //検索
 class FindController {
-	public $model;
-	public $view;
 
 	public function findAction() {
 		global $connect;
 		$view = new View();
+		$boards = array();
 		
 		if(!empty($_GET['search'])) {
 			$model = new Model();
 			$str =  mysqli_real_escape_string($connect, trim($_GET['str']));
 			$boards = $model->find_topic($str);
+			if(empty($boards)){
+				$_SESSION['err_find'] = 51;
+				$boards = array();
+			}
 		}
-		else {
-			$boards = array();
-		}
-		require_once 'view_find.php';
+		$page_title = "タイトル検索";
+		require_once 'header.php';
+		$view->FormFindView();
+		$view->BoardsView($boards);
+		require_once 'footer.php';
 	}
 }
 
 
 //ログイン
 class LoginController {
-	public $model;
 	
 	public function loginAction() {
 		global $connect;
 		$login_id = mysqli_real_escape_string($connect, trim($_POST['login_id']));
 		$password = mysqli_real_escape_string($connect, trim($_POST['password']));
 		
-		if(!isset($_COOKIE['name'])) {
+		if(!empty($login_id) && !empty($password)){
 			$model = new Model();
 			$model->check_login($login_id, $password);
-			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+			if(isset($_POST['board_id'])) {
+				$board_id = $_POST['board_id'];
+				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
+			}
+			else {
+				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+			}
 			exit();
 		}
 		else {
-			$_SESSION['err'] = 12;
+			$_SESSION['err_login'] = 13;
 		}
-		
+		header('Location: ' . $_SERVER['HTTP_REFERER']);
 	}
 }
 
@@ -261,7 +290,6 @@ class LogoutController {
 
 //ユーザー登録
 class SignupController {
-	public $model;
 	
 	public function signupAction() {
 		global $connect;
@@ -281,23 +309,95 @@ class SignupController {
 				}
 			}
 			else {
-				$_SESSION['err'] = 21;
+				$_SESSION['err_signup'] = 21;
 			}
 		}
 		else {
-			$_SESSION['err'] = 0;
+			$_SESSION['err_signup'] = 23;
 		}
 		require_once 'view_signup.php';
 	}
 }
 
-//エラー表示 フォームが複数ある場合に対処すること
-function error(){
-	if(isset($_SESSION['err'])) {
-		switch ($_SESSION['err']) {
-			case 0:
-				$err = "記入漏れがあります。";
-				break;
+//ユーザー削除
+class UserDelController {
+	
+	public function userdelAction() {
+		$model = new Model();
+		$user_id = $_COOKIE['id'];
+		
+		$model->user_delete($user_id);
+		setcookie("id", $_COOKIE['id'], time()-1);
+		setcookie("name", $_COOKIE['name'], time()-1);
+		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+	}
+}
+
+//管理者用操作
+class AdminController {
+	public function adminAction() {
+		$adminview = new AdminView();
+		$adminmodel = new AdminModel();
+		
+		if(isset($_GET['topic'])) {
+			if(isset($_POST['delete'])){
+				echo 'delete';
+			}
+			else if(isset($_POST['update'])) {
+				echo 'update';
+			}
+			else if(isset($_POST['add'])) {
+				echo 'add';
+			}
+			else {
+				$boards = $adminmodel->get_boards();
+				$page_title = "トピック一覧";
+				require_once 'header.php';
+				$adminview->AdminBoardssView($boards);
+				require_once 'footer.php';
+			}
+		}
+		else if(isset($_GET['comment'])) {
+			
+		}
+		else if(isset($_GET['user'])) {
+			
+		}
+		else {
+			require_once 'view_admin.php';
+		}
+	}
+	
+	public function adminloginAction() {
+		global $connect;
+		$model = new Model();
+		$login_id = mysqli_real_escape_string($connect, trim($_POST['login_id']));
+		$password = mysqli_real_escape_string($connect, trim($_POST['password']));
+		
+		if(!empty($login_id) && !empty($password)) {
+			$model->admin_login_check($login_id, $password);
+		}
+		else {
+			$_SESSION['err_admin'] = 101;
+		}
+		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin');
+		exit();
+	}
+	
+	public function adminlogoutAction() {
+			setcookie("admin_id", $_COOKIE['admin_id'], time()-1);
+			setcookie("admin_name", $_COOKIE['admin_name'], time()-1);
+			
+			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+	}
+}
+
+
+
+//エラー表示
+function error_login(){
+	if(isset($_SESSION['err_login'])) {
+		switch ($_SESSION['err_login']) {
 			//ログイン時のエラー
 			case 11:
 				$err = "IDまたはパスワードが間違っています。";
@@ -305,7 +405,22 @@ function error(){
 			case 12:
 				$err = "既にログインしています。";
 				break;
+			case 13:
+				$err = "IDとパスワードを入力して下さい。";
+				break;
 			
+			//その他
+			default :
+				$err = "";
+				break;
+		}
+		unset($_SESSION['err_login']);
+		echo '<span style="color: red;">' . $err . '</span>';
+	}
+}
+function error_signup(){
+	if(isset($_SESSION['err_signup'])) {
+		switch ($_SESSION['err_signup']) {
 			//サインアップ時のエラー
 			case 21:
 				$err = "パスワードは両方とも同じものを入力して下さい。";
@@ -313,23 +428,80 @@ function error(){
 			case 22:
 				$err = "同じ名前が既にあります。";
 				break;
-			
+			case 23:
+				$err = "全て記入してください。";
+				break;
+	
+			//その他
+			default :
+				$err = "";
+				break;
+		}
+		unset($_SESSION['err_signup']);
+		echo '<span style="color: red;">' . $err . '</span>';
+	}
+}
+function error_comment(){
+	if(isset($_SESSION['err_comment'])) {
+		switch ($_SESSION['err_comment']) {
 			//コメント作成時のエラー
 			case 31:
 				$err = "コメントを入力してください。";
 				break;
+			case 98:
+				$err = "削除キーが英数字以外です。";
+				break;
 			
+			//その他
+			default :
+				$err = "";
+				break;
+		}
+		unset($_SESSION['err_comment']);
+		echo '<span style="color: red;">' . $err . '</span>';
+	}
+}
+function error_topic(){
+	if(isset($_SESSION['err_topic'])) {
+		switch ($_SESSION['err_topic']) {
 			//トピック作成時のエラー
 			case 41:
 				$err = "タイトルとコメントを入力して下さい。";
 				break;
+			case 98:
+				$err = "削除キーが英数字以外です。";
+				break;
 			
+			//その他
+			default :
+				$err = "";
+				break;
+		}
+		unset($_SESSION['err_topic']);
+		echo '<span style="color: red;">' . $err . '</span>';
+	}
+}
+function error_find(){
+	if(isset($_SESSION['err_find'])) {
+		switch ($_SESSION['err_find']) {
 			//検索時のエラー
 			case 51:
 				$err = "見つかりませんでした。";
 				break;
 			
-			//del_keyの不一致
+			//その他
+			default :
+				$err = "";
+				break;
+		}
+		unset($_SESSION['err_find']);
+		echo '<span style="color: red;">' . $err . '</span>';
+	}
+}
+function error_delete() {
+	if(isset($_SESSION['err_delete'])) {
+		switch ($_SESSION['err_delete']) {
+			//削除時のエラー
 			case 99:
 				$err = "削除キーが違います。";
 				break;
@@ -339,8 +511,39 @@ function error(){
 				$err = "";
 				break;
 		}
-		unset($_SESSION['err']);
+		unset($_SESSION['err_delete']);
 		echo '<span style="color: red;">' . $err . '</span>';
 	}
 }
+function error_admin() {
+	if(isset($_SESSION['err_admin'])) {
+		switch ($_SESSION['err_admin']) {
+			case 101:
+				$err = "全て入力してください。";
+				break;
+			case 102:
+				$err = "ID又はパスワードが間違っています。";
+		}
+		unset($_SESSION['err_admin']);
+		echo '<span style="color: red;">' . $err . '</span>';
+	}
+}
+
+
+function page_title() {
+	$view = new View();
+	$num = func_num_args();
+	$page_title = func_get_arg(0);
+	for($i=1; $i<$num; $i++) {
+		$array[] = func_get_arg($i);
+	}
+	
+	require_once 'header.php';
+	foreach($array as $funcname) {
+		$view->$funcname();
+	}
+	require_once 'footer.php';
+}
+
+
 ?>
