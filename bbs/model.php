@@ -29,7 +29,7 @@ class Model {
 		}
 		
 		$sql = "select max(comnum) from comment where board_id='$board_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) != 0) {
 			$row = mysqli_fetch_array($result);
 			$comnum = $row['max(comnum)'] + 1;
@@ -71,7 +71,7 @@ class Model {
 			$image_name = NULL;
 		}
 		$sql = "update comment set image='$image_name' where id='$comment_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 
 	}
 
@@ -79,7 +79,7 @@ class Model {
 	public function check_comment($id) {
 		global $connect;
 		$sql = "select id, contents, image from comment where id='$id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$row = mysqli_fetch_array($result);
 		$row['contents'] = nl2br($row['contents']);
 		$row['img'] = $this->image_exist($row['id']);
@@ -90,13 +90,13 @@ class Model {
 	public function update_comment($comment_id, $newcomm, $img_del) {
 		global $connect;
 		$sql = "update comment set contents='$newcomm' where id='$comment_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		if($_FILES['image']['error'] == 0) {
 			$this->image_upload($comment_id);
 		}
 		if($img_del) {
 			$sql = "update comment set image='' where id='$comment_id';";
-			$result = mysqli_query($connect, $sql);
+			$result = mysqli_query($connect, $sql) or die('error');
 		}
 		$board_id = $this->cid_to_bid($comment_id);
 		$this->last_updated($board_id);
@@ -119,7 +119,7 @@ class Model {
 		$result = mysqli_query($connect, $sql) or die('トピックを作成できませんでした。');
 
 		$sql = "select id from board where title='$title';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$board_id = mysqli_fetch_array($result);
 
 		//コメント追加
@@ -134,7 +134,7 @@ class Model {
 		$str = mysqli_real_escape_string($connect, $str);
 		echo '"' . $str . '" で検索しました。<br>';
 		$sql = "select id, title, last_updated from board where title like '%$str%';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		
 		while($row = mysqli_fetch_array($result)) {
 			$boards[] = $row;
@@ -150,7 +150,7 @@ class Model {
 		global $connect;
 
 		$sql = "delete board, comment from board, comment where board.id='$board_id' and comment.board_id='$board_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 
 
 	}
@@ -159,12 +159,12 @@ class Model {
 	public function get_boards() {
 		global $connect;
 		$sql = "select id, title, last_updated from board order by last_updated desc;";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		
 		while($row = mysqli_fetch_array($result)) {
 			$board_id = $row['id'];
 			$sql = "select count(board_id) from comment where board_id='$board_id';";
-			$result2 = mysqli_query($connect, $sql);
+			$result2 = mysqli_query($connect, $sql) or die('error');
 			$count = mysqli_fetch_row($result2); //数値添字の配列で返される
 			$row['count'] = $count[0];
 			$boards[] = $row;
@@ -176,7 +176,7 @@ class Model {
 	public function comment_count($board_id) {
 		global $connect;
 		$sql = "select count(board_id) from comment where board_id='$board_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$ccount = mysqli_fetch_array($result);
 
 		return $ccount['count(board_id)'];
@@ -186,7 +186,7 @@ class Model {
 	public function last_comment_id($board_id) {
 		global $connect;
 		$sql = "select id from comment where board_id='$board_id' order by created_at desc limit 1;";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$lastid = mysqli_fetch_array($result);
 
 		return $lastid['id'];
@@ -196,17 +196,42 @@ class Model {
 	public function last_comment_time($board_id) {
 		global $connect;
 		$sql = "select created_at from comment where board_id='$board_id' order by created_at desc limit 1;";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$lastct = mysqli_fetch_array($result);
 
 		return $lastct['created_at'];
 	}
 
 	//board内のコメント関連データ取得
-	public function show_comments($board_id) {
+	public function get_comments($board_id) {
 		global $connect;
-		$sql = "select id,  user_id, pen_name, contents, image, created_at from comment where board_id='$board_id' order by id;";
-		$result = mysqli_query($connect, $sql);
+		$sql = "select id, user_id, pen_name, contents, image, created_at from comment where board_id='$board_id' order by id;";
+		$result = mysqli_query($connect, $sql) or die('error');
+		
+		while($row = mysqli_fetch_array($result)) {
+			$comment['id'] = $row['id'];
+			$comment['user_id'] = $row['user_id'];
+			$comment['pen_name'] = $row['pen_name'];
+			$comment['contents'] = $row['contents'];
+			$comment['image'] = $row['image'];
+			$comment['created_at'] = $row['created_at'];
+			if(!empty($row['user_id'])) {
+				$comment['user_name'] = '【' . $this->user_id_to_name($row['user_id']) . '】';
+			}
+			else if(!empty($row['pen_name'])) {
+				$comment['user_name'] = $row['pen_name'];
+			}
+			else {
+				$comment['user_name'] = '名無し';
+			}
+			
+			$comment['contents'] = nl2br($row['contents']);
+			
+			$comment['img'] = $this->image_exist($row['id']);
+			
+			$comments[] = $comment;
+		}
+		/*
 		while($row = mysqli_fetch_array($result)) {
 			if(!empty($row['user_id'])) {
 				$row['user_name'] = '【' . $this->user_id_to_name($row['user_id']) . '】';
@@ -217,14 +242,14 @@ class Model {
 			else {
 				$row['user_name'] = '名無し';
 			}
-			
+
 			$row['contents'] = nl2br($row['contents']);
-			
+
 			$row['img'] = $this->image_exist($row['id']);
-			
+
 			$comments[] = $row;
 		}
-
+		*/
 		return $comments;
 	}
 
@@ -232,7 +257,7 @@ class Model {
 	public function get_title($board_id) {
 		global $connect;
 		$sql = "select title from board where id='$board_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$title = mysqli_fetch_array($result);
 
 		return $title['title'];
@@ -242,7 +267,7 @@ class Model {
 	public function user_id_to_name($user_id) {
 		global $connect;
 		$sql = "select name from users where id='$user_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$name = mysqli_fetch_array($result);
 
 		return $name['name'];
@@ -252,7 +277,7 @@ class Model {
 	public function cid_to_bid($cid) {
 		global $connect;
 		$sql = "select board_id from comment where id='$cid';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$bid = mysqli_fetch_array($result);
 
 		return $bid['board_id'];
@@ -263,7 +288,7 @@ class Model {
 		global $connect;
 		$bool = FALSE;
 		$sql = "select id from comment where board_id='$board_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) > 1) {
 			$bool = TRUE;
 		}
@@ -276,7 +301,7 @@ class Model {
 		global $connect;
 		$bool = FALSE;
 		$sql = "select image from comment where id='$comment_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		$row = mysqli_fetch_array($result);
 		if($row['image'] != NULL) {
 			$bool = TRUE;
@@ -290,10 +315,10 @@ class Model {
 
 		//既に同じ名前があるか
 		$sql = "select name from users where name='$name'";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 0) {
 			$sql = "insert into users(login_id, password, name) values('$login_id', '$password', '$name');";
-			$result = mysqli_query($connect, $sql);
+			$result = mysqli_query($connect, $sql) or die('error');
 		}
 		else {
 			$_SESSION['err_signup'] = 22;
@@ -307,7 +332,7 @@ class Model {
 		global $connect;
 		
 		$sql = "delete from users where id='$user_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 	}
 
 	//del_keyが正しいか
@@ -315,7 +340,7 @@ class Model {
 		global $connect;
 		$bool = FALSE;
 		$sql = "select id from comment where id='$comment_id' and del_key='$del_key';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 1) {
 			$bool = TRUE;
 		}
@@ -325,7 +350,7 @@ class Model {
 		global $connect;
 		$bool = FALSE;
 		$sql = "select id from board where id='$board_id' and del_key='$del_key';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 1) {
 			$bool = TRUE;
 		}
@@ -336,7 +361,7 @@ class Model {
 	public function check_login($login_id, $password) {
 		global $connect;
 		$sql = "select id, name from users where login_id='$login_id' and password='$password';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 1){
 			$row = mysqli_fetch_array($result);
 			setcookie('id', $row['id'], 0);
@@ -352,14 +377,14 @@ class Model {
 		global $connect;
 		
 		$sql = "update board set last_updated=now() where id='$board_id';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 	}
 	
 	//管理者ログイン IDパスワード照合
 	public function admin_login_check($login_id, $password) {
 		global $connect;
 		$sql = "select id, name from admins where login_id='$login_id' and password='$password';";
-		$result = mysqli_query($connect, $sql);
+		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 1){
 			$row = mysqli_fetch_array($result);
 			setcookie('admin_id', $row['id'], 0);
@@ -378,6 +403,18 @@ class Model {
 }
 
 class AdminModel extends Model {
+	public function check_board($board_id) {
+		global $connect;
+		$sql = "select id, title, del_key from board where id='$board_id';";
+		$result = mysqli_query($connect, $sql) or die('error');
+		$row = mysqli_fetch_array($result);
+		return $row;
+	}
 	
+	public function update_board($board_id, $title, $del_key) {
+		global $connect;
+		$sql = "update board set title='$title', del_key='$del_key' where id='$board_id';";
+		$result = mysqli_query($connect, $sql) or die('error');
+	}
 }
 ?>

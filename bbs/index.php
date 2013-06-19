@@ -125,8 +125,15 @@ switch ($request) {
 			$admincontroller->adminloginAction();
 		}
 		else {
-			$view = new View();
+			$adminview = new AdminView();
 			page_title("管理者用ログイン", 'FormAdminLogin');
+		}
+		break;
+	
+	case 'image':
+		if(isset($_GET['name'])) {
+			$view = new View();
+			$view->ImageView($_GET['name']);
 		}
 		break;
 	

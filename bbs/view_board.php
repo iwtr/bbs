@@ -49,7 +49,7 @@
 							<?php echo $row['contents']; ?>
 						</td>
 						<td style="max-height: 150px; width: 200px;">
-							<?php if($row['img']) { echo '<img style="max-height: 150px; max-width:200px;" src="image/' . $row['image'] . '">'; } ?>
+							<?php if($row['img']) { echo '<a href="index?request=image&name='.$row['image'].'"><img style="max-height: 150px; max-width:200px;" src="image/' . $row['image'] . '"></a>'; } ?>
 						</td>
 					</tr>
 					<tr>

@@ -27,7 +27,7 @@ class BoardController {
 		$board_id = $_GET['board_id'];
 		
 		$title = $model->get_title($board_id);
-		$comments = $model->show_comments($board_id);
+		$comments = $model->get_comments($board_id);
 		
 		
 		require_once 'view_board.php';
@@ -39,52 +39,67 @@ class AddController {
 	
 	public function addtopicAction() {
 		global $connect;
+		$url = "/index.php";
 		
 		if(!empty($_POST['title']) && !empty($_POST['contents'])) {
 			$del_key = mysqli_real_escape_string($connect, trim($_POST['del_key']));
 			if($del_key == NULL) {
 				$del_key ="0000";
 			}
-			if(ctype_alnum($del_key)) {
-				$title = mysqli_real_escape_string($connect, trim($_POST['title']));
-				$contents = mysqli_real_escape_string($connect, trim($_POST['contents']));
-				
-				$model = new Model();
-				$board_id = $model->addtopic(htmlspecialchars($title), htmlspecialchars($contents), $del_key);
-				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
-				exit();
+			if(mb_strlen($_POST['pen_name']) <= 11) {
+				if(ctype_alnum($del_key)) {
+					$title = mysqli_real_escape_string($connect, trim($_POST['title']));
+					$contents = mysqli_real_escape_string($connect, trim($_POST['contents']));
+
+					$model = new Model();
+					$board_id = $model->addtopic(htmlspecialchars($title), htmlspecialchars($contents), $del_key);
+					if(isset($_POST['admin'])) {
+						$url = "/index?request=admin&topic";
+					}
+					else {
+						$url = "/index?request=board&board_id=" . $board_id;
+					}
+				}
+				else {
+					$_SESSION['err_topic'] = 98;
+				}
 			}
 			else {
-				$_SESSION['err_topic'] = 98;
+				$_SESSION['err_topic'] = 42;
 			}
 		}
 		else {
 			$_SESSION['err_topic'] = 41;
 		}
-		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . $url);
 		exit();
 	}
 	
 	public function addcommentAction() {
 		global $connect;
 		$board_id = $_POST['board_id'];
-		if(!empty($_POST['contents'])) {
-			$del_key = mysqli_real_escape_string($connect, trim($_POST['del_key']));
-			if($del_key == NULL) {
-				$del_key ="0000";
-			}
-			if(ctype_alnum($del_key)) {
-				$contents = mysqli_real_escape_string($connect, trim($_POST['contents']));
-				
-				$model = new Model();
-				$model->addcomment($board_id, htmlspecialchars($contents), $del_key);
+		if(mb_strlen($_POST['pen_name']) <= 11) {
+			if(!empty($_POST['contents'])) {
+				$del_key = mysqli_real_escape_string($connect, trim($_POST['del_key']));
+				if($del_key == NULL) {
+					$del_key ="0000";
+				}
+				if(ctype_alnum($del_key)) {
+					$contents = mysqli_real_escape_string($connect, trim($_POST['contents']));
+
+					$model = new Model();
+					$model->addcomment($board_id, htmlspecialchars($contents), $del_key);
+				}
+				else {
+					$_SESSION['err_comment'] = 98;
+				}
 			}
 			else {
-				$_SESSION['err_comment'] = 98;
+				$_SESSION['err_comment'] = 31;
 			}
 		}
 		else {
-			$_SESSION['err_comment'] = 31;
+			$_SESSION['err_comment'] = 32;
 		}
 		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
 		exit();
@@ -301,15 +316,20 @@ class SignupController {
 		$name = mysqli_real_escape_string($connect, trim($_POST['name']));
 
 		if(!empty($login_id) && !empty($password1) && !empty($password2) && !empty($name)) {
-			if($password1 == $password2) {
+			if(mb_strlen($name) <= 11) {
+				if($password1 == $password2) {
 
-				if($model->user_signup($login_id, $password1, $name)) {
-					$model->check_login($login_id, $password1);
-					header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+					if($model->user_signup($login_id, $password1, $name)) {
+						$model->check_login($login_id, $password1);
+						header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+					}
+				}
+				else {
+					$_SESSION['err_signup'] = 21;
 				}
 			}
 			else {
-				$_SESSION['err_signup'] = 21;
+				$_SESSION['err_signup'] = 24;
 			}
 		}
 		else {
@@ -339,27 +359,109 @@ class AdminController {
 		$adminview = new AdminView();
 		$adminmodel = new AdminModel();
 		
+		//トピックに対する操作
 		if(isset($_GET['topic'])) {
-			if(isset($_POST['delete'])){
-				echo 'delete';
+			//削除
+			if(isset($_POST['chkdelete'])) {
+				$del_list = $_POST['delete_board_id'];
+				if(!empty($del_list)) {
+					$_SESSION['del_list'] = $del_list;
+					//削除確認
+					foreach ($del_list as $board_id) {
+						$titles[] = $adminmodel->get_title($board_id);
+					}
+					$page_title = "削除確認";
+					require_once 'header.php';
+					$adminview->AdminBoardsDeleteCheckView($titles);
+					require_once 'footer.php';
+				}
+				else {
+					header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&topic');
+					exit();
+				}
 			}
-			else if(isset($_POST['update'])) {
-				echo 'update';
+			else if(isset($_POST['delete'])) {
+				$del_list = $_SESSION['del_list'];
+				unset($_SESSION['del_list']);
+				foreach ($del_list as $board_id) {
+					$adminmodel->del_topic($board_id);
+				}
+				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&topic');
+				exit();
 			}
-			else if(isset($_POST['add'])) {
-				echo 'add';
+			
+			//更新
+			else if(isset($_POST['chkupdate'])) {
+				$board_id = $_POST['update_board_id'];
+				$row = $adminmodel->check_board($board_id); //array(id, title, del_key)
+				$page_title = "トピック編集";
+				require_once 'header.php';
+				$adminview->AdminBoardUpdateCheckView($row);
+				require_once 'footer.php';
 			}
+			else if(isset ($_POST['update'])) {
+				$board_id = $_POST['board_id'];
+				$title = $_POST['title'];
+				$del_key = $_POST['del_key'];
+				
+				$adminmodel->update_board($board_id, $title, $del_key);
+				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&topic');
+				exit();
+			}
+			
+			//デフォルト画面
 			else {
 				$boards = $adminmodel->get_boards();
 				$page_title = "トピック一覧";
 				require_once 'header.php';
-				$adminview->AdminBoardssView($boards);
+				$adminview->AdminBoardsView($boards);
 				require_once 'footer.php';
 			}
 		}
+		
+		//コメントに対する操作
 		else if(isset($_GET['comment'])) {
+			//削除
+			if(isset($_POST['chkdelete'])) {
+				$del_list = $_POST['delete_comment_id'];
+				if(!empty($del_list)) {
+					$_SESSION['del_list'] = $del_list;
+					
+					
+				}
+			}
+			else if(isset($_POST['delete'])) {
+				
+			}
 			
+			//更新
+			if(isset($_POST['chkupdate'])) {
+				
+			}
+			if(isset($_POST['update'])) {
+				
+			}
+			
+			//追加
+			if(isset($_POST['add'])) {
+				
+			}
+			
+			//デフォルト画面
+			else {
+				$boards = $adminmodel->get_boards();
+				foreach ($boards as $board) {
+					$title = $board['title'];
+					$comments = $adminmodel->get_comments($board['id']); //array(id, user_id, pen_name, contents, image, created_at, user_name, img)
+					foreach ($comments as &$comment) { //参照渡しでないと変更できない
+					$comment['contents'] = mb_strimwidth($comment['contents'], 0, 50, '...', 'utf-8');
+					}
+					$adminview->AdminCommentsView($title, $comments);
+				}
+			}
 		}
+		
+		//登録ユーザーに対する操作
 		else if(isset($_GET['user'])) {
 			
 		}
@@ -431,7 +533,9 @@ function error_signup(){
 			case 23:
 				$err = "全て記入してください。";
 				break;
-	
+			case 24:
+				$err = "名前が長過ぎます。";
+				break;
 			//その他
 			default :
 				$err = "";
@@ -447,6 +551,9 @@ function error_comment(){
 			//コメント作成時のエラー
 			case 31:
 				$err = "コメントを入力してください。";
+				break;
+			case 32:
+				$err = "名前が長すぎます。";
 				break;
 			case 98:
 				$err = "削除キーが英数字以外です。";
@@ -467,6 +574,9 @@ function error_topic(){
 			//トピック作成時のエラー
 			case 41:
 				$err = "タイトルとコメントを入力して下さい。";
+				break;
+			case 42:
+				$err = "名前が長すぎます。";
 				break;
 			case 98:
 				$err = "削除キーが英数字以外です。";

@@ -45,6 +45,10 @@ class View {
 	}
 	
 	public function FormTopicView() {
+		if(func_get_args() != NULL) {
+			$admin = func_get_arg(0);
+			?> <input form="formtopic" type="hidden" name="admin"> <?php
+		}
 		?>
 		<table style="background-color: #ddd; margin-top: 5px;">
 			<tbody>
@@ -52,7 +56,7 @@ class View {
 					<td>
 						新しく掲示板を作る<br>
 						<?php error_topic(); ?>
-						<form enctype="multipart/form-data" method="post" action="index?request=add">
+						<form id="formtopic" enctype="multipart/form-data" method="post" action="index?request=add">
 							<label for="text1">タイトル：</label><input id="text1" type="text" name="title" placeholder=""><br>
 							<?php if(!isset($_COOKIE['name'])) { ?>
 								<label for="text2">名前：</label><input id="text2" type="text" name="pen_name"><br>
@@ -154,20 +158,8 @@ class View {
 		</form>
 		<?php
 	}
-	
-	public function FormAdminLogin() {
-		?>
-		管理者としてログインします。<br>
-		<?php error_admin(); ?>
-		<form method="POST" action="index?request=admin">
-			<label for="item1">ID：</label><input id="item1" type="text" name="login_id"><br>
-			<label for="item2">パスワード：</label><input id="item2" type="password" name="password"><br>
-			<input type="submit" name="admin_login" value="ログイン">
-		</form>
-		<?php
-	}
 
-		public function UserDelete() {
+	public function UserDelete() {
 		?>
 		現在ログイン中のユーザー <?php echo $_COOKIE['name']; ?> を削除します。<br>
 		<form method="POST" action="index?request=user_del">
@@ -224,43 +216,164 @@ class View {
 		<?php
 	}
 	
+	public function ImageView($name) {
+		$page_title = $name;
+		require_once 'header.php';
+		echo '<img src="image/'.$name.'">';
+		require_once 'footer.php';
+	}
+	
 }
 
 class AdminView extends View {
-	public function AdminBoardssView($boards) {
+	public function FormAdminLogin() {
 		?>
-		<div style="display: table">
-			<form method="POST" action="index?request=admin&topic">
-				<div style="display: table-cell">
-					<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
-						<thead><tr><td>削除</td><td>編集</td></tr></thead>
-						<tbody>
-							<?php foreach ($boards as $row) { ?>
-							<tr>
-								<td style="text-align: center;"><input type="checkbox" name="delete" value="<?php $row['id'] ?>"></td>
-								<td style="text-align: center;">
-									<!--
-									<form name="form1" method="POST" action="index?request=admin&topic">
-										<input type="hidden" name="update">
-										<a href="#" onClick="document.form1.submit();">●</a>
-									</form>
-									-->
-								</td>
-							</tr>
-							<?php } ?>
-						</tbody>
-					</table>
-				</div>
-				<div style="display: table-cell">
-					<?php $this->BoardsView($boards); ?>
-				</div>
-				<input type="submit" name="delete" value="チェックした項目を削除">
+		管理者としてログインします。<br>
+		<?php error_admin(); ?>
+		<form method="POST" action="index?request=admin">
+			<label for="item1">ID：</label><input id="item1" type="text" name="login_id"><br>
+			<label for="item2">パスワード：</label><input id="item2" type="password" name="password"><br>
+			<input type="submit" name="admin_login" value="ログイン">
+		</form>
+		<?php
+	}
+	
+	public function AdminBoardsView($boards) {
+		?>
+		<div style="display: table;">
+			<div style="display: table-cell;">
+				<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
+					<thead><tr><td>削除</td></tr></thead>
+					<tbody>
+						
+						<?php foreach ($boards as $row) { ?>
+						<tr>
+							<td style="text-align: center;">
+								<input form="formboarddelete" type="checkbox" name="delete_board_id[]" value="<?php echo $row['id']; ?>">
+							</td>
+						</tr>
+						<?php } ?>
+						
+					</tbody>
+				</table>
+			</div>
+			<div style="display: table-cell;">
+				<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
+					<thead><tr><td>編集</td></tr></thead>
+					<tbody>
+						<?php foreach ($boards as $row) { ?>
+						<tr>
+							<td style="text-align: center;">
+								<form method="POST" action="index?request=admin&topic">
+									<input type="hidden" name="update_board_id" value="<?php echo $row['id']; ?>">
+									<input style="margin: 0px;" type="submit" name="chkupdate" value="編集">
+								</form>
+							</td>
+						</tr>
+						<?php } ?>
+					</tbody>
+				</table>
+			</div>
+			<div style="display: table-cell;">
+				<?php $this->BoardsView($boards); ?>
+			</div>
+		</div>
+		<div>
+			<form id="formboarddelete" method="POST" action="index?request=admin&topic">
+				<input type="submit" name="chkdelete" value="チェックした項目を削除">
 			</form>
-			<?php $this->FormTopicView(); ?>
+			<?php $admin=TRUE; $this->FormTopicView($admin); ?>
 		</div>
 		<?php
 	}
 	
+	public function AdminBoardsDeleteCheckView($titles) {
+		?>
+		以下のトピックを削除します。<br>
+		<?php foreach ($titles as $title) {	echo $title.'<br>'; } ?>
+		<br>
+		<form method="POST" action="index?request=admin&topic">
+			<input type="submit" name="delete" value="確認">
+		</form>
+		<?php
+	}
+	
+	public function AdminBoardUpdateCheckView($row) {
+		?>
+		<div style="display: table;">
+			<div style="display: table-header-group;">
+				<div style="display: table-cell; border: solid 1px;">
+					タイトル
+				</div>
+				<div style="display: table-cell; border: solid 1px;">
+					削除キー
+				</div>
+			</div>
+			<div style="display: table-row;">
+				<div style="display: table-cell; border: solid 1px;">
+					<?php echo $row['title']; ?>
+				</div>
+				<div style="display: table-cell; border: solid 1px;">
+					<?php echo $row['del_key']; ?>
+				</div>
+			</div>
+		</div>
+		
+		<div>
+			上記の内容を更新します。<br>
+			<?php error_admin(); ?>
+			<form method="POST" action="index?request=admin&topic">
+				<label for="item1">タイトル：</label><input id="item1" type="text" name="title"><br>
+				<label for="item2">削除キー：</label><input id="item2" type="password" maxlength="4" name="del_key"><br>
+				<input type="hidden" name="board_id" value="<?php echo $row['id']; ?>">
+				<input type="submit" name="update" value="更新する">
+			</form>
+		</div>
+		<?php
+	}
+	
+	public function AdminCommentsView($title, $comments) {
+		//title, array(id, user_id, pen_name, contents, image, created_at, user_name, img)
+		?>
+		<div style="display: table; background-color: #eee; margin-bottom: 10px; padding: 5px;">
+			タイトル：<?php echo $title; ?>
+			<table border="1">
+				<thead>
+					<tr>
+						<td>削除</td>
+						<td>編集</td>
+						<td>user_name</td>
+						<td>contents</td>
+						<td>image</td>
+						<td>created_at</td>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ($comments as $row) { ?>
+					<tr>
+						<td><input form="formcommentdelete" type="checkbox" name="delete_comment_id[]" value="<?php echo $row['id']; ?>"></td>
+						<td>
+							<form method="POST" action="index?request=admin&comment">
+								<input type="hidden" name="update_board_id" value="<?php echo $row['id']; ?>">
+								<input style="margin: auto;" type="submit" name="chkupdate" value="編集">
+							</form>
+						</td>
+						<td style="width: 12em;"><?php echo $row['user_name']; ?></td>
+						<td style="width: 30em;"><?php echo $row['contents']; ?></td>
+						<td style="text-align: center;">
+							<?php if($row['img']) { echo '<a href="index?request=image&name='.$row['image'].'">●</a>'; } ?>
+						</td>
+						<td><?php echo $row['created_at']; ?></td>
+					</tr>
+					<?php } ?>
+				</tbody>
+			</table>
+			<form id="formcommentdelete" method="POST" action="index?request=admin&comment">
+				<input type="submit" name="chkdelete" value="チェックした項目を削除">
+			</form>
+		</div>
+		<?php
+	}
 }
 
 ?>
