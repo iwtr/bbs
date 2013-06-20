@@ -74,13 +74,17 @@ class Model {
 		$result = mysqli_query($connect, $sql) or die('error');
 
 	}
+	
+	
+	
 
 	//更新・削除時のコメント確認
-	public function check_comment($id) {
+	public function check_comment($comment_id) {
 		global $connect;
-		$sql = "select id, contents, image from comment where id='$id';";
+		$sql = "select id, user_id, pen_name, contents, image, created_at from comment where id='$comment_id';";
 		$result = mysqli_query($connect, $sql) or die('error');
-		$row = mysqli_fetch_array($result);
+		
+		$row = mysqli_fetch_assoc($result);
 		$row['contents'] = nl2br($row['contents']);
 		$row['img'] = $this->image_exist($row['id']);
 		return $row;
@@ -101,14 +105,24 @@ class Model {
 		$board_id = $this->cid_to_bid($comment_id);
 		$this->last_updated($board_id);
 	}
-
+	
+	
 	//レコード削除
 	public function del_comment($id){
 		global $connect;
-		$sql = "delete from comment where id='$id';";
-		$result = mysqli_query($connect, $sql) or die('データを削除できませんでした。');
+		$board_del = FALSE;
+		$board_id = $this->cid_to_bid($id);
+		if($this->board_delcheck($board_id)) {
+			$sql = "delete from comment where id='$id';";
+			$result = mysqli_query($connect, $sql) or die('データを削除できませんでした。');
+		}
+		else {
+			$this->del_topic($board_id);
+			$board_del = TRUE;
+		}
+		return $board_del;
 	}
-
+	
 
 	//トピック追加
 	public function addtopic($title, $contents, $del_key) {
@@ -231,25 +245,6 @@ class Model {
 			
 			$comments[] = $comment;
 		}
-		/*
-		while($row = mysqli_fetch_array($result)) {
-			if(!empty($row['user_id'])) {
-				$row['user_name'] = '【' . $this->user_id_to_name($row['user_id']) . '】';
-			}
-			else if(!empty($row['pen_name'])) {
-				$row['user_name'] = $row['pen_name'];
-			}
-			else {
-				$row['user_name'] = '名無し';
-			}
-
-			$row['contents'] = nl2br($row['contents']);
-
-			$row['img'] = $this->image_exist($row['id']);
-
-			$comments[] = $row;
-		}
-		*/
 		return $comments;
 	}
 
@@ -317,6 +312,7 @@ class Model {
 		$sql = "select name from users where name='$name'";
 		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 0) {
+			$password = sha1($password);
 			$sql = "insert into users(login_id, password, name) values('$login_id', '$password', '$name');";
 			$result = mysqli_query($connect, $sql) or die('error');
 		}
@@ -360,6 +356,7 @@ class Model {
 	//ログイン処理
 	public function check_login($login_id, $password) {
 		global $connect;
+		$password = sha1($password);
 		$sql = "select id, name from users where login_id='$login_id' and password='$password';";
 		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 1){
@@ -396,9 +393,16 @@ class Model {
 		return $login;
 	}
 	
-	public function old_topic_del() {
+	
+	public function board_id_exist($board_id) {
 		global $connect;
-
+		
+		$sql = "select id from board where id='$board_id';";
+		$result = mysqli_query($connect, $sql);
+		if(mysqli_num_rows($result) != 0) {
+			return TRUE;
+		}
+		return FALSE;
 	}
 }
 
@@ -415,6 +419,27 @@ class AdminModel extends Model {
 		global $connect;
 		$sql = "update board set title='$title', del_key='$del_key' where id='$board_id';";
 		$result = mysqli_query($connect, $sql) or die('error');
+	}
+	
+	public function get_users() {
+		global $connect;
+		
+		$sql = "select * from users";
+		$result = mysqli_query($connect, $sql);
+		while($row = mysqli_fetch_assoc($result)) {
+			$users[] = $row;
+		}
+		if(empty($users)) { $users = array(); }
+		return $users;
+	}
+	
+	public function check_user($user_id) {
+		global $connect;
+		$sql = "select * from users where id='$user_id';";
+		$result = mysqli_query($connect, $sql);
+		$row = mysqli_fetch_assoc($result);
+		
+		return $row;
 	}
 }
 ?>

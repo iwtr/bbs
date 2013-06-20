@@ -78,6 +78,12 @@ class AddController {
 	public function addcommentAction() {
 		global $connect;
 		$board_id = $_POST['board_id'];
+		if(isset($_POST['admin'])) {
+			$url = "/index?request=admin&comment";
+		}
+		else {
+			$url = "/index?request=board&board_id=". $board_id;
+		}
 		if(mb_strlen($_POST['pen_name']) <= 11) {
 			if(!empty($_POST['contents'])) {
 				$del_key = mysqli_real_escape_string($connect, trim($_POST['del_key']));
@@ -86,9 +92,13 @@ class AddController {
 				}
 				if(ctype_alnum($del_key)) {
 					$contents = mysqli_real_escape_string($connect, trim($_POST['contents']));
-
 					$model = new Model();
-					$model->addcomment($board_id, htmlspecialchars($contents), $del_key);
+					if($model->board_id_exist($board_id)) {
+						$model->addcomment($board_id, htmlspecialchars($contents), $del_key);
+					}
+					else {
+						$_SESSION['err_comment'] = 33;
+					}
 				}
 				else {
 					$_SESSION['err_comment'] = 98;
@@ -101,7 +111,7 @@ class AddController {
 		else {
 			$_SESSION['err_comment'] = 32;
 		}
-		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
+		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . $url);
 		exit();
 	}
 }
@@ -116,9 +126,10 @@ class UpdateController {
 		$comment_id = $_POST['comment_id'];
 		$row = $model->check_comment($comment_id);
 		$page_title = "更新";
+		$admin = FALSE;
 		require_once 'header.php';
 		$view->UpdateDeleteCheckView($row);
-		$view->FormUpdateView($row);
+		$view->FormUpdateView($row, $admin);
 		require_once 'footer.php';
 	}
 	
@@ -126,6 +137,7 @@ class UpdateController {
 		global $connect;
 		$model = new Model();
 		$view = new View();
+		$admin = FALSE;
 		
 		$del_key = $_POST['del_key'];
 		$comment_id = $_POST['comment_id'];
@@ -135,12 +147,18 @@ class UpdateController {
 		}
 		
 		$board_id = $model->cid_to_bid($comment_id);
+		$url = "'/index?request=board&board_id=' . $board_id";
+		
+		if(isset($_POST['admin'])) {
+			$admin = TRUE;
+			$url = "/index?request=admin&comment";
+		}
 		
 		//削除キーが合ってるかどうか
-		if($model->check_del_key($comment_id, $del_key)) {
+		if($model->check_del_key($comment_id, $del_key) || isset($_POST['admin'])) {
 			$newcomment = mysqli_real_escape_string($connect, trim($_POST['newcomm']));
 			$model->update_comment($comment_id, $newcomment, $img_del);
-			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
+			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . $url);
 		}
 		else {
 			$_SESSION['err_delete'] = 99;
@@ -148,7 +166,7 @@ class UpdateController {
 			$page_title = "更新";
 			require_once 'header.php';
 			$view->UpdateDeleteCheckView($row);
-			$view->FormUpdateView($row);
+			$view->FormUpdateView($row, $admin);
 			require_once 'footer.php';
 		}
 		exit();
@@ -211,8 +229,7 @@ class DeleteController {
 		$del_key = $_POST['del_key'];
 		$board_id = $model->cid_to_bid($comment_id);
 		if($model->check_del_key($comment_id, $del_key)) {
-			if($model->board_delcheck($board_id)) {
-				$model->del_comment($comment_id);
+			if(!$model->del_comment($comment_id)) {
 				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
 			}
 			else {
@@ -321,7 +338,9 @@ class SignupController {
 
 					if($model->user_signup($login_id, $password1, $name)) {
 						$model->check_login($login_id, $password1);
+						
 						header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+						exit();
 					}
 				}
 				else {
@@ -335,7 +354,8 @@ class SignupController {
 		else {
 			$_SESSION['err_signup'] = 23;
 		}
-		require_once 'view_signup.php';
+		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=signup');
+		exit();
 	}
 }
 
@@ -411,10 +431,12 @@ class AdminController {
 			
 			//デフォルト画面
 			else {
+				$admin = TRUE;
 				$boards = $adminmodel->get_boards();
 				$page_title = "トピック一覧";
 				require_once 'header.php';
 				$adminview->AdminBoardsView($boards);
+				$adminview->FormTopicView($admin);
 				require_once 'footer.php';
 			}
 		}
@@ -426,45 +448,101 @@ class AdminController {
 				$del_list = $_POST['delete_comment_id'];
 				if(!empty($del_list)) {
 					$_SESSION['del_list'] = $del_list;
-					
-					
+					//削除確認
+					foreach ($del_list as $comment_id) {
+						$comments[] = $adminmodel->check_comment($comment_id);
+					}
+					$page_title = "削除確認";
+					require_once 'header.php';
+					//$adminview->AdminCommentsView($comments);
+					$adminview->AdminCommentsDeleteCheckView($comments);
+					require_once 'footer.php';
+				}
+				else {
+					header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&comment');
+					exit();
 				}
 			}
 			else if(isset($_POST['delete'])) {
-				
+				$del_list = $_SESSION['del_list'];
+				unset($_SESSION['del_list']);
+				foreach ($del_list as $comment_id) {
+					$adminmodel->del_comment($comment_id);
+				}
+				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&comment');
+				exit();
 			}
 			
 			//更新
-			if(isset($_POST['chkupdate'])) {
-				
-			}
-			if(isset($_POST['update'])) {
-				
-			}
-			
-			//追加
-			if(isset($_POST['add'])) {
-				
+			else if(isset($_POST['chkupdate'])) {
+				$comment_id = $_POST['update_comment_id'];
+				$row = $adminmodel->check_comment($comment_id);
+				$page_title = "コメント編集";
+				require_once 'header.php';
+				$adminview->UpdateDeleteCheckView($row);
+				$admin = TRUE;
+				$adminview->FormUpdateView($row, $admin);
+				require_once 'footer.php';
 			}
 			
 			//デフォルト画面
 			else {
+				$admin = TRUE;
 				$boards = $adminmodel->get_boards();
+				$page_title = "コメント一覧";
+				require_once 'header.php';
 				foreach ($boards as $board) {
-					$title = $board['title'];
+					//$title = $board['title'];
 					$comments = $adminmodel->get_comments($board['id']); //array(id, user_id, pen_name, contents, image, created_at, user_name, img)
 					foreach ($comments as &$comment) { //参照渡しでないと変更できない
-					$comment['contents'] = mb_strimwidth($comment['contents'], 0, 50, '...', 'utf-8');
+						$comment['contents'] = mb_strimwidth($comment['contents'], 0, 50, '...', 'utf-8');
 					}
-					$adminview->AdminCommentsView($title, $comments);
+					$adminview->AdminCommentsView($board['id'], $title, $comments);
 				}
+				$adminview->AdminFormCommentsView(); //削除チェックボックス用
+				$adminview->FormContentsView($admin);
+				require_once 'footer.php';
 			}
 		}
 		
 		//登録ユーザーに対する操作
 		else if(isset($_GET['user'])) {
+			//削除
+			if(isset($_POST['chkdelete'])) {
+				$del_list = $_POST['delete_user_id'];
+				if(!empty($del_list)) {
+					$_SESSION['del_list'] = $del_list;
+					foreach ($del_list as $user_id) {
+						$users[] = $adminmodel->check_user($user_id);
+					}
+					$page_title = "削除確認";
+					require_once 'header.php';
+					$adminview->AdminUsersView($users);
+					require_once 'footer.php';
+				}
+			}
+			else if(isset($_POST['delete'])) {
+				$del_list = $_SESSION['del_list'];
+				unset($_SESSION['del_list']);
+				foreach ($del_list as $user_id) {
+					$adminmodel->user_delete($user_id);
+				}
+				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&user');
+				exit();
+			}
 			
+			
+			else {
+				$users = $adminmodel->get_users();
+				$page_title = "登録ユーザー一覧";
+				require_once 'header.php';
+				$adminview->AdminUsersView($users);
+				$adminview->FormSignupView();
+				require_once 'footer.php';
+			}
 		}
+		
+		//管理者メニュー
 		else {
 			require_once 'view_admin.php';
 		}
@@ -555,6 +633,9 @@ function error_comment(){
 			case 32:
 				$err = "名前が長すぎます。";
 				break;
+			case 33:
+				$err = "存在しないboard_idです。";
+				break;
 			case 98:
 				$err = "削除キーが英数字以外です。";
 				break;
@@ -633,6 +714,7 @@ function error_admin() {
 				break;
 			case 102:
 				$err = "ID又はパスワードが間違っています。";
+				break;
 		}
 		unset($_SESSION['err_admin']);
 		echo '<span style="color: red;">' . $err . '</span>';
@@ -641,7 +723,7 @@ function error_admin() {
 
 
 function page_title() {
-	$view = new View();
+	$adminview = new AdminView();
 	$num = func_num_args();
 	$page_title = func_get_arg(0);
 	for($i=1; $i<$num; $i++) {
@@ -650,7 +732,7 @@ function page_title() {
 	
 	require_once 'header.php';
 	foreach($array as $funcname) {
-		$view->$funcname();
+		$adminview->$funcname();
 	}
 	require_once 'footer.php';
 }
