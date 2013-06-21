@@ -216,7 +216,7 @@ class Model {
 		return $lastct['created_at'];
 	}
 
-	//board内のコメント関連データ取得
+	//board内のコメント関連データを全て取得
 	public function get_comments($board_id) {
 		global $connect;
 		$sql = "select id, user_id, pen_name, contents, image, created_at from comment where board_id='$board_id' order by id;";
@@ -247,15 +247,48 @@ class Model {
 		}
 		return $comments;
 	}
+	
+	//コメントのデータ取得　ページ分割版
+	public function get_comments_page($board_id, $start, $limit) {
+		global $connect;
+		$sql = "select id, user_id, pen_name, contents, image, created_at 
+						from comment where board_id='$board_id' order by id limit $start, $limit;";
+		$result = mysqli_query($connect, $sql) or die('error');
+		
+		while($row = mysqli_fetch_array($result)) {
+			$comment['id'] = $row['id'];
+			$comment['user_id'] = $row['user_id'];
+			$comment['pen_name'] = $this->ngword_translate($row['pen_name']);
+			$comment['contents'] = $row['contents'];
+			$comment['image'] = $row['image'];
+			$comment['created_at'] = $row['created_at'];
+			if(!empty($row['user_id'])) {
+				$comment['user_name'] = '【' . $this->ngword_translate($this->user_id_to_name($row['user_id'])) . '】';
+			}
+			else if(!empty($row['pen_name'])) {
+				$comment['user_name'] = $row['pen_name'];
+			}
+			else {
+				$comment['user_name'] = '名無し';
+			}
+			
+			$comment['contents'] = nl2br($this->ngword_translate($row['contents']));
+			
+			$comment['img'] = $this->image_exist($row['id']);
+			
+			$comments[] = $comment;
+		}
+		return $comments;
+	}
 
 	//title取得
 	public function get_title($board_id) {
 		global $connect;
 		$sql = "select title from board where id='$board_id';";
 		$result = mysqli_query($connect, $sql) or die('error');
-		$title = mysqli_fetch_array($result);
+		$title = mysqli_fetch_assoc($result);
 
-		return $title['title'];
+		return $this->ngword_translate($title['title']);
 	}
 
 	//user_idをnameに変換
@@ -393,7 +426,7 @@ class Model {
 		return $login;
 	}
 	
-	
+	//ボードIDが存在するか
 	public function board_id_exist($board_id) {
 		global $connect;
 		
@@ -403,6 +436,15 @@ class Model {
 			return TRUE;
 		}
 		return FALSE;
+	}
+	
+	
+	//NGワードを＊＊＊に変換
+	public function ngword_translate($str) {
+		
+		$str = str_replace(ngword, '＊＊＊', $str);
+		
+		return $str;
 	}
 }
 

@@ -28,13 +28,12 @@
 		<table style="background-color: #ccc; margin: 0px auto; width: 100%;">
 			<tbody>
 				<?php
-				$i = 1;
 				foreach ($comments as $row) {
 					?>
 					<tr>
 						<td colspan="2">
 							<div style="float: left; width: 40px; margin-right: 10px;">
-								<?php echo $i; ?>
+								<?php echo ''; ?>
 							</div>
 							<div style="float: left;">
 								名前：<?php echo $row['user_name']; ?>
@@ -49,7 +48,11 @@
 							<?php echo $row['contents']; ?>
 						</td>
 						<td style="max-height: 150px; width: 200px;">
-							<?php if($row['img']) { echo '<a href="index?request=image&name='.$row['image'].'"><img style="max-height: 150px; max-width:200px;" src="image/' . $row['image'] . '"></a>'; } ?>
+							<?php if($row['img']) { ?>
+								<a href="index?request=image&name='<?php echo $row['image']; ?>'">
+									<img style="max-height: 150px; max-width:200px;" src="image/<?php echo $row['image']; ?>">
+								</a>
+							<?php } ?>
 						</td>
 					</tr>
 					<tr>
@@ -70,7 +73,10 @@
 					<?php $i++; } ?>
 			</tbody>
 		</table>
-		<?php $view->FormContentsView(); ?>
+		<?php $view->page_button($board_id, $page_exist); ?>
+		<div>
+			<?php $view->FormContentsView(); ?>
+		</div>
 	</div>
 	<input type="button" onClick="location.href='index.php';" value="掲示板一覧に戻る">
 </body>

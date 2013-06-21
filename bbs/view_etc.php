@@ -241,6 +241,21 @@ class View {
 		require_once 'footer.php';
 	}
 	
+	public function page_button($board_id, $page_exist) {
+		?>
+		<div style="background-color: #eee; margin: auto; width: 100px;">
+			<span style="font-size: 20px; text-align: center;">
+				<?php if($page_exist[0]) { ?>
+					<a href="index?request=board&board_id=<?php echo $board_id; ?>&prev">&lt;&lt;</a>
+				<?php } ?>&nbsp;&nbsp;
+				<?php if($page_exist[1]) { ?>
+					<a href="index?request=board&board_id=<?php echo $board_id; ?>&next">&gt;&gt;</a>
+				<?php } ?>
+			</span>
+		</div>
+		<?php
+	}
+
 }
 
 class AdminView extends View {
@@ -470,6 +485,26 @@ class AdminView extends View {
 				<input type="submit" name="<?php echo $name; ?>" value="チェックした項目を削除">
 			</form>
 		</div>
+		<?php
+	}
+	
+	public function FormAdminSettingView($message, $current_num) {
+		?>
+		<?php error_admin(); ?>
+		<?php	echo $message; ?><br>
+		現在の数値：<?php echo $current_num; ?><br>
+		<form method="POST" action="">
+			<input type="text" name="set">
+			<input type="submit" name="change" value="変更">
+		</form>
+		<?php
+	}
+	
+	public function AdminNgwordView() {
+		?>
+		現在のNGワード<br>
+		<?php foreach ($ngwords as $ngword) {	echo $ngword. '<br>'; } ?>
+		<?php $this->FormAdminSettingView($message, $current_num); ?>
 		<?php
 	}
 	

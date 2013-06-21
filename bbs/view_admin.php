@@ -16,7 +16,8 @@
 					<li><a href ="index?request=admin&user">ユーザー</a></li>
 				</ul>
 			</li>
-			<li><a href="">トピック自動消滅までの時間設定</a></li>
+			<li><a href="index?request=admin&settings&page">ページ最大表示数変更</a></li>
+			<!--<li><a href="index?request=admin&settings&ngword">禁止ワードの設定</a></li>-->
 			<li style="list-style-type: none; height: 15px;"></li>
 			<li><a href="index?request=admin&logout">ログアウト</a></li>
 		</ul>

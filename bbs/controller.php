@@ -4,6 +4,7 @@ session_start();
 header("Content-type: text/html; charset=utf-8");
 
 require_once 'model.php';
+require_once 'bbssettings.php';
 
 //トップ画面表示
 class TopController {
@@ -12,6 +13,7 @@ class TopController {
 		$model = new Model();
 		$boards = array();
 		
+		unset($_SESSION['page']);
 		$boards = $model->get_boards();
 		$view = new View();
 		require_once 'view_top.php';
@@ -25,10 +27,31 @@ class BoardController {
 		$model = new Model();
 		$view = new View();
 		$board_id = $_GET['board_id'];
+		$count = $model->comment_count($board_id);
+		if(!isset($_SESSION['page'])) {
+			$_SESSION['page'] = 0;
+			$start = 0;
+		}
+		else {
+			page_transitions($count, $_SESSION['page'] * page_limit, page_limit);
+			$start = $_SESSION['page'] * page_limit;
+		}
+		
+		if($_SESSION['page'] != 0) {
+			$page_exist[0] = TRUE;
+		}
+		if($start + page_limit <= $count) {
+			$page_exist[1] = TRUE;
+		}
+		echo 'count:'. $count;
+		echo '<br>page:'. $_SESSION['page'];
+		echo '<br>start:'. $start;
+		echo '<br>page_limit:'. page_limit;
+		
 		
 		$title = $model->get_title($board_id);
-		$comments = $model->get_comments($board_id);
-		
+		//$comments = $model->get_comments($board_id);
+		$comments = $model->get_comments_page($board_id, $start, page_limit);
 		
 		require_once 'view_board.php';
 	}
@@ -542,6 +565,49 @@ class AdminController {
 			}
 		}
 		
+		//設定
+		else if(isset($_GET['settings'])) {
+			
+			$file = file("bbssettings.php");
+			if(isset($_GET['page'])) {
+				if(isset($_POST['change'])) {
+					if(ctype_digit($_POST['set'])) {
+						$set = $_POST['set'];
+						$fp = fopen("bbssettings.php", "w");
+
+						foreach ($file as $line) {
+							$pos = strpos($line, 'page_limit');
+							if($pos === FALSE){
+							}
+							else {
+								$line = 'define("page_limit", '. $set .');'. PHP_EOL; //改行
+							}
+							fwrite($fp, $line);
+						}
+						fclose($fp);
+						header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin');
+						exit();
+					}
+					else {
+						//入力が数値でない
+						$_SESSION['err_admin'] = 103;
+						header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&settings&page');
+						exit();
+					}
+				}
+				else {
+					$message = '１ページ内でのコメント表示数を変更します';
+					$current_num = page_limit;
+					$adminview->FormAdminSettingView($message, $current_num);
+				}
+			}
+			else if(isset($_GET['ngword'])){
+				echo 'ngword';
+				$adminview->AdminNgwordView(); 
+				
+			}
+		}
+		
 		//管理者メニュー
 		else {
 			require_once 'view_admin.php';
@@ -573,6 +639,7 @@ class AdminController {
 }
 
 
+//DB使わない関数
 
 //エラー表示
 function error_login(){
@@ -715,6 +782,9 @@ function error_admin() {
 			case 102:
 				$err = "ID又はパスワードが間違っています。";
 				break;
+			case 103:
+				$err = "半角数字で入力してください。";
+				break;
 		}
 		unset($_SESSION['err_admin']);
 		echo '<span style="color: red;">' . $err . '</span>';
@@ -737,5 +807,48 @@ function page_title() {
 	require_once 'footer.php';
 }
 
+//ページ遷移
+function page_transitions($count, $current_start, $page_limit) {
+	if(isset($_GET['prev'])) {
+		if($_SESSION['page'] > 0) {
+			echo 'prev<br>';
+			$_SESSION['page']--;
+		}
+		else {
+			echo 'ページがない（前）<br>';
+		}
+	}
+	if(isset($_GET['next'])) {
+		if(($current_start + $page_limit) < $count) {
+			echo 'next<br>';
+			$_SESSION['page']++;
+		}
+		else {
+			echo 'ページがない（後）<br>';
+		}
+	}
+}
+
+function ngword_set($new_ngword) {
+	$file = file("bbssettings.php");
+	
+	foreach ($file as $line) {
+		$pos = strpos($line, "ngword$i");
+		if($pos){
+		}
+	}
+	
+	/*
+	$fp = fopen("bbssettings.php", "w");
+	foreach ($file as $line) {
+		$pos = strpos($line, "ngword$i");
+		if($pos){
+			$line = 'define("ngword'.$i.'", '. $new_ngword .');'. PHP_EOL; //改行
+		}
+		fwrite($fp, $line);
+	}
+	fclose($fp);
+	*/
+}
 
 ?>
