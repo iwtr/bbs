@@ -56,7 +56,7 @@ class Model {
 			$image_tmp = $_FILES['image']['tmp_name'];
 			$image_type = $_FILES['image']['type'];
 			$image_size = $_FILES['image']['size'];
-			if(is_uploaded_file($_FILES['image']['tmp_name'])) {
+			if(is_uploaded_file($image_tmp)) {
 				//画像が規定の容量以内でファイル形式がjpeg,gif,pngか
 				if(($image_size > 0 && $image_size < 5000000) && ($image_type == 'image/jpeg' || $image_type == 'image/pjpeg' || $image_type == 'image/gif')) {
 					move_uploaded_file($image_tmp, 'image/' . $image_name);
@@ -74,8 +74,6 @@ class Model {
 		$result = mysqli_query($connect, $sql) or die('error');
 
 	}
-	
-	
 	
 
 	//更新・削除時のコメント確認
@@ -176,10 +174,11 @@ class Model {
 		$result = mysqli_query($connect, $sql) or die('error');
 		
 		while($row = mysqli_fetch_array($result)) {
+			$row['title'] = $this->ngword_translate($row['title']);
 			$board_id = $row['id'];
 			$sql = "select count(board_id) from comment where board_id='$board_id';";
 			$result2 = mysqli_query($connect, $sql) or die('error');
-			$count = mysqli_fetch_row($result2); //数値添字の配列で返される
+			$count = mysqli_fetch_row($result2);
 			$row['count'] = $count[0];
 			$boards[] = $row;
 		}
@@ -255,28 +254,20 @@ class Model {
 						from comment where board_id='$board_id' order by id limit $start, $limit;";
 		$result = mysqli_query($connect, $sql) or die('error');
 		
-		while($row = mysqli_fetch_array($result)) {
-			$comment['id'] = $row['id'];
-			$comment['user_id'] = $row['user_id'];
-			$comment['pen_name'] = $this->ngword_translate($row['pen_name']);
-			$comment['contents'] = $row['contents'];
-			$comment['image'] = $row['image'];
-			$comment['created_at'] = $row['created_at'];
+		while($row = mysqli_fetch_assoc($result)) {
 			if(!empty($row['user_id'])) {
-				$comment['user_name'] = '【' . $this->ngword_translate($this->user_id_to_name($row['user_id'])) . '】';
+				$row['user_name'] = '【' . $this->ngword_translate($this->user_id_to_name($row['user_id'])) . '】';
 			}
 			else if(!empty($row['pen_name'])) {
-				$comment['user_name'] = $row['pen_name'];
+				$row['user_name'] = $this->ngword_translate($row['pen_name']);
 			}
 			else {
-				$comment['user_name'] = '名無し';
+				$row['user_name'] = '名無し';
 			}
+			$row['contents'] = nl2br($this->ngword_translate($row['contents']));
+			$row['img'] = $this->image_exist($row['id']);
 			
-			$comment['contents'] = nl2br($this->ngword_translate($row['contents']));
-			
-			$comment['img'] = $this->image_exist($row['id']);
-			
-			$comments[] = $comment;
+			$comments[] = $row;
 		}
 		return $comments;
 	}
@@ -390,12 +381,13 @@ class Model {
 	public function check_login($login_id, $password) {
 		global $connect;
 		$password = sha1($password);
-		$sql = "select id, name from users where login_id='$login_id' and password='$password';";
+		$sql = "select id, name, admin from users where login_id='$login_id' and password='$password';";
 		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 1){
 			$row = mysqli_fetch_array($result);
 			setcookie('id', $row['id'], 0);
 			setcookie('name', $row['name'], 0);
+			setcookie('admin', $row['admin'], 0);
 		}
 		else {
 			$_SESSION['err_login'] = 11;
@@ -410,6 +402,7 @@ class Model {
 		$result = mysqli_query($connect, $sql) or die('error');
 	}
 	
+	/*
 	//管理者ログイン IDパスワード照合
 	public function admin_login_check($login_id, $password) {
 		global $connect;
@@ -425,6 +418,7 @@ class Model {
 		}
 		return $login;
 	}
+	*/
 	
 	//ボードIDが存在するか
 	public function board_id_exist($board_id) {
@@ -441,9 +435,15 @@ class Model {
 	
 	//NGワードを＊＊＊に変換
 	public function ngword_translate($str) {
-		
-		$str = str_replace(ngword, '＊＊＊', $str);
-		
+		$ngwords = file("ngwords.dat");
+		foreach ($ngwords as $ngword) {
+			$ngword = str_replace("\n", '', $ngword);
+			$pos = strpos($str, $ngword);
+			if($pos !== FALSE){
+				$str = str_replace($ngword, '＊＊＊', $str);
+			}
+		}
+		unset($ngword);
 		return $str;
 	}
 }
@@ -453,7 +453,8 @@ class AdminModel extends Model {
 		global $connect;
 		$sql = "select id, title, del_key from board where id='$board_id';";
 		$result = mysqli_query($connect, $sql) or die('error');
-		$row = mysqli_fetch_array($result);
+		$row = mysqli_fetch_assoc($result);
+		//$row['title'] = '';
 		return $row;
 	}
 	
@@ -482,6 +483,35 @@ class AdminModel extends Model {
 		$row = mysqli_fetch_assoc($result);
 		
 		return $row;
+	}
+	
+	public function authority_change($user_id, $authority) {
+		global $connect;
+
+		$sql = "update users set admin='$authority' where id='$user_id'";
+		$result = mysqli_query($connect, $sql);
+	}
+	
+	public function ngword_set($new_ngword) {
+		$fp = fopen("ngwords.dat", "a");
+		$line = "$new_ngword\n";
+		fwrite($fp, $line);
+		unset($line);
+		fclose($fp);
+	}
+	
+	public function file_rewrite($filename, $searchstr, $set) {
+		$file = file($filename);
+		$fp = fopen($filename, "w");
+		foreach ($file as $line) {
+			$pos = strpos($line, $searchstr);
+			if($pos !== FALSE){
+				$line = "define('$searchstr', $set);\n";
+			}
+			fwrite($fp, $line);
+		}
+		unset($line);
+		fclose($fp);
 	}
 }
 ?>

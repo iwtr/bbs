@@ -43,10 +43,10 @@ class BoardController {
 		if($start + page_limit <= $count) {
 			$page_exist[1] = TRUE;
 		}
-		echo 'count:'. $count;
-		echo '<br>page:'. $_SESSION['page'];
-		echo '<br>start:'. $start;
-		echo '<br>page_limit:'. page_limit;
+		echo 'count:'. $count.'<br>';
+		echo 'page:'. $_SESSION['page'].'<br>';
+		echo 'start:'. $start.'<br>';
+		echo 'page_limit:'. page_limit.'<br>';
 		
 		
 		$title = $model->get_title($board_id);
@@ -170,7 +170,7 @@ class UpdateController {
 		}
 		
 		$board_id = $model->cid_to_bid($comment_id);
-		$url = "'/index?request=board&board_id=' . $board_id";
+		$url = '/index?request=board&board_id='. $board_id;
 		
 		if(isset($_POST['admin'])) {
 			$admin = TRUE;
@@ -332,12 +332,13 @@ class LogoutController {
 	public function logoutAction() {
 		setcookie("id", $_COOKIE['id'], time()-1);
 		setcookie("name", $_COOKIE['name'], time()-1);
+		setcookie('admin', $_COOKIE['admin'], time()-1);
 		
 		if(isset($_SERVER['HTTP_REFERER'])) {
 			header('Location: ' . $_SERVER['HTTP_REFERER']);
 		}
 		else {
-			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/keijiban_top.php');
+			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
 		}
 		exit();
 	}
@@ -396,6 +397,15 @@ class UserDelController {
 	}
 }
 
+//ユーザー更新
+class UserUpdateController {
+	
+	public function userupdateAction() {
+		$model = new Model();
+		
+	}
+}
+
 //管理者用操作
 class AdminController {
 	public function adminAction() {
@@ -413,6 +423,7 @@ class AdminController {
 					foreach ($del_list as $board_id) {
 						$titles[] = $adminmodel->get_title($board_id);
 					}
+					unset($board_id);
 					$page_title = "削除確認";
 					require_once 'header.php';
 					$adminview->AdminBoardsDeleteCheckView($titles);
@@ -429,6 +440,7 @@ class AdminController {
 				foreach ($del_list as $board_id) {
 					$adminmodel->del_topic($board_id);
 				}
+				unset($board_id);
 				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&topic');
 				exit();
 			}
@@ -475,6 +487,7 @@ class AdminController {
 					foreach ($del_list as $comment_id) {
 						$comments[] = $adminmodel->check_comment($comment_id);
 					}
+					unset($comment_id);
 					$page_title = "削除確認";
 					require_once 'header.php';
 					//$adminview->AdminCommentsView($comments);
@@ -492,6 +505,7 @@ class AdminController {
 				foreach ($del_list as $comment_id) {
 					$adminmodel->del_comment($comment_id);
 				}
+				unset($comment_id);
 				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&comment');
 				exit();
 			}
@@ -520,8 +534,9 @@ class AdminController {
 					foreach ($comments as &$comment) { //参照渡しでないと変更できない
 						$comment['contents'] = mb_strimwidth($comment['contents'], 0, 50, '...', 'utf-8');
 					}
-					$adminview->AdminCommentsView($board['id'], $title, $comments);
+					$adminview->AdminCommentsView($board['id'], $board['title'], $comments);
 				}
+				unset($board);
 				$adminview->AdminFormCommentsView(); //削除チェックボックス用
 				$adminview->FormContentsView($admin);
 				require_once 'footer.php';
@@ -538,9 +553,13 @@ class AdminController {
 					foreach ($del_list as $user_id) {
 						$users[] = $adminmodel->check_user($user_id);
 					}
+					unset($user_id);
+					$display = array('none');
+					$name = "delete";
 					$page_title = "削除確認";
 					require_once 'header.php';
-					$adminview->AdminUsersView($users);
+					echo '以下のユーザーを削除します。';
+					$adminview->AdminUsersView($users, $display, $name);
 					require_once 'footer.php';
 				}
 			}
@@ -550,16 +569,18 @@ class AdminController {
 				foreach ($del_list as $user_id) {
 					$adminmodel->user_delete($user_id);
 				}
+				unset($user_id);
 				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&user');
 				exit();
 			}
 			
-			
 			else {
 				$users = $adminmodel->get_users();
+				$display = array('');
+				$name = 'chkdelete';
 				$page_title = "登録ユーザー一覧";
 				require_once 'header.php';
-				$adminview->AdminUsersView($users);
+				$adminview->AdminUsersView($users, $display, $name);
 				$adminview->FormSignupView();
 				require_once 'footer.php';
 			}
@@ -568,29 +589,29 @@ class AdminController {
 		//設定
 		else if(isset($_GET['settings'])) {
 			
-			$file = file("bbssettings.php");
+			//ページ最大表示件数の設定
 			if(isset($_GET['page'])) {
-				if(isset($_POST['change'])) {
-					if(ctype_digit($_POST['set'])) {
-						$set = $_POST['set'];
-						$fp = fopen("bbssettings.php", "w");
-
-						foreach ($file as $line) {
-							$pos = strpos($line, 'page_limit');
-							if($pos === FALSE){
-							}
-							else {
-								$line = 'define("page_limit", '. $set .');'. PHP_EOL; //改行
-							}
-							fwrite($fp, $line);
+				
+				if(isset($_POST['submit'])) {
+					if(!empty($_POST['set'])) {
+						if(ctype_digit($_POST['set'])) {
+							$filename = 'bbssettings.php';
+							$searchstr = 'page_limit';
+							$set = $_POST['set'];
+							$adminmodel->file_rewrite($filename, $searchstr, $set);
+							
+							header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin');
+							exit();
 						}
-						fclose($fp);
-						header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin');
-						exit();
+						else {
+							//入力が数値でない
+							$_SESSION['err_admin'] = 103;
+							header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&settings&page');
+							exit();
+						}
 					}
 					else {
-						//入力が数値でない
-						$_SESSION['err_admin'] = 103;
+						$_SESSION['err_admin'] = 101;
 						header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&settings&page');
 						exit();
 					}
@@ -601,10 +622,152 @@ class AdminController {
 					$adminview->FormAdminSettingView($message, $current_num);
 				}
 			}
-			else if(isset($_GET['ngword'])){
-				echo 'ngword';
-				$adminview->AdminNgwordView(); 
+			
+			//NGワードの追加・削除
+			else if(isset($_GET['ngword'])) {
+				if(isset($_POST['submit'])) {
+					if(!empty($_POST['set'])) {
+						$new_ngword = $_POST['set'];
+						$adminmodel->ngword_set($new_ngword);
+					}
+					else {
+						$_SESSION['err_admin'] = 101;
+					}
+					header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&settings&ngword');
+					exit();
+				}
+				else if(isset($_POST['chkdelete'])) {
+					$del_list = $_POST['delete_ngword'];
+					if(!empty($del_list)) {
+						$_SESSION['del_list'] = $del_list;
+						$file = file('ngwords.dat');
+						$i = 0; $j = 0;
+						foreach($file as $line) {
+							if($i == $del_list[$j]) {
+								$ngwords[] = $line;
+								$j++;
+							}
+							$i++;
+						}
+						$display = "none"; $name = "delete";
+						echo '以下のNGワードを削除します。';
+						$adminview->AdminNgwordView($ngwords, $display, $name);
+					}
+				}
+				else if(isset($_POST['delete'])) {
+					$del_list = $_SESSION['del_list'];
+					unset($_SESSION['del_list']);
+					$file = file('ngwords.dat');
+					$fp = fopen('ngwords.dat', 'w');
+					$i = 0; $j = 0;
+					foreach($file as $line) {
+						if($i == $del_list[$j]) {
+							$j++;
+						}
+						else {
+							fwrite($fp, $line);
+						}
+						$i++;
+					}
+					fclose($fp);
+					header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&settings&ngword');
+					exit();
+				}
+				else {
+					$ngwords = file("ngwords.dat");
+					$message = 'NGワード追加フォーム';
+					$current_num='';
+					$display = ""; $name = "chkdelete";
+					
+					$adminview->AdminNgwordView($ngwords, $display, $name);
+					$adminview->FormAdminSettingView($message, $current_num);
+				}
+			}
+			
+			//ユーザーの権限変更
+			else if(isset($_GET['authority'])) {
 				
+				if(isset($_POST['chkupdate'])) {
+					$user_id = $_POST['update_user_id'];
+					$user = $adminmodel->check_user($user_id);
+					$user_name = $user['name'];
+					if($user['admin']) {
+						$user_info = array('checked="checked"', '');
+					}
+					else {
+						$user_info = array('', 'checked="checked"');
+					}
+					$page_title = '権限変更';
+					require_once 'header.php';
+					$adminview->AdminUsersAuthorityChangeView($user_name, $user_info);
+					require_once 'footer.php';
+				}
+				else if(isset($_POST['update'])) {
+					$user_id = $_POST['user_id'];
+					if($_POST['authority'] == 'on') {
+						$authority = TRUE;
+					}
+					else {
+						$authority = FALSE;
+					}
+					$adminmodel->authority_change($user_id, $authority);
+					if($user_id == $_COOKIE['id']) {
+						$logoutcontroller = new LogoutController();
+						$logoutcontroller->logoutAction();
+					}
+					header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&settings&authority');
+					exit();
+				}
+				else {
+					$users = $adminmodel->get_users();
+					$display = array('none', 'none');
+					$name = "";
+					$page_title = 'ユーザー権限の変更';
+					require_once 'header.php';
+					$adminview->AdminUsersAuthorityView($users);
+					$adminview->AdminUsersView($users, $display, $name);
+					require_once 'footer.php';
+				}
+			}
+			
+			//色の変更
+			else if(isset($_GET['color'])) {
+				if(isset($_POST['change'])) { 
+					$new_color = "'".$_POST['new_color']."'";
+					$name = $_POST['name'];
+					$filename = 'bbssettings.php';
+					$adminmodel->file_rewrite($filename, $name, $new_color);
+					header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin&settings&color');
+					exit();
+				}
+				else {
+					$message = array(
+							'内容表示画面 外側：',
+							'内容表示画面 内側：',
+							'入力フォーム：',
+							'トピック一覧：',
+							'背景：'
+					);
+					$name = array(
+							'board_outerbox_bgcolor',
+							'board_innerbox_bgcolor',
+							'forms_bgcolor',
+							'boards_bgcolor',
+							'background'
+					);
+					$color = array(
+							board_outerbox_bgcolor,
+							board_innerbox_bgcolor,
+							forms_bgcolor,
+							boards_bgcolor,
+							background
+							);
+					require_once 'header.php';
+					for($i=0; $i<=count($message)-1; $i++) {
+						$adminview->AdminColorLayoutView($message[$i], $name[$i], $color[$i]);
+					}
+					require_once 'footer.php';
+				}
 			}
 		}
 		
@@ -614,32 +777,9 @@ class AdminController {
 		}
 	}
 	
-	public function adminloginAction() {
-		global $connect;
-		$model = new Model();
-		$login_id = mysqli_real_escape_string($connect, trim($_POST['login_id']));
-		$password = mysqli_real_escape_string($connect, trim($_POST['password']));
-		
-		if(!empty($login_id) && !empty($password)) {
-			$model->admin_login_check($login_id, $password);
-		}
-		else {
-			$_SESSION['err_admin'] = 101;
-		}
-		header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin');
-		exit();
-	}
-	
-	public function adminlogoutAction() {
-			setcookie("admin_id", $_COOKIE['admin_id'], time()-1);
-			setcookie("admin_name", $_COOKIE['admin_name'], time()-1);
-			
-			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
-	}
 }
 
 
-//DB使わない関数
 
 //エラー表示
 function error_login(){
@@ -791,7 +931,7 @@ function error_admin() {
 	}
 }
 
-
+//ページタイトルを設定
 function page_title() {
 	$adminview = new AdminView();
 	$num = func_num_args();
@@ -799,11 +939,11 @@ function page_title() {
 	for($i=1; $i<$num; $i++) {
 		$array[] = func_get_arg($i);
 	}
-	
 	require_once 'header.php';
 	foreach($array as $funcname) {
 		$adminview->$funcname();
 	}
+	unset($funcname);
 	require_once 'footer.php';
 }
 
@@ -827,28 +967,6 @@ function page_transitions($count, $current_start, $page_limit) {
 			echo 'ページがない（後）<br>';
 		}
 	}
-}
-
-function ngword_set($new_ngword) {
-	$file = file("bbssettings.php");
-	
-	foreach ($file as $line) {
-		$pos = strpos($line, "ngword$i");
-		if($pos){
-		}
-	}
-	
-	/*
-	$fp = fopen("bbssettings.php", "w");
-	foreach ($file as $line) {
-		$pos = strpos($line, "ngword$i");
-		if($pos){
-			$line = 'define("ngword'.$i.'", '. $new_ngword .');'. PHP_EOL; //改行
-		}
-		fwrite($fp, $line);
-	}
-	fclose($fp);
-	*/
 }
 
 ?>

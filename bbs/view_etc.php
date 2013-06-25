@@ -1,28 +1,30 @@
+<?php session_start(); ?>
 <?php
-session_start();
 
 class View {
 	
 	public function MenuView() {
 		?>
-		<table style="border: solid 1px;">
-			<tbody>
-				<tr>
-					<td><a href="index?request=find">トピック検索</a></td>
-					<td><a href="index?request=signup">ユーザー登録</a></td>
-					<?php if(isset($_COOKIE['name'])) { ?>
-					<td><a href="index?request=user_del">ユーザー削除</a></td>
-					<?php } ?>
-				</tr>
-			</tbody>
-		</table>
+		<div>
+			<table style="border: solid 1px;">
+				<tbody>
+					<tr>
+						<td><a href="index?request=find">トピック検索</a></td>
+						<td><a href="index?request=signup">ユーザー登録</a></td>
+						<?php if(isset($_COOKIE['name'])) { ?>
+						<td><a href="index?request=user_del">ユーザー削除</a></td>
+						<?php } ?>
+					</tr>
+				</tbody>
+			</table>
+		</div>
 		<?php
 	}
 	
 	public function FormLoginView() {
 		if(!isset($_COOKIE['name'])) {
 		?>
-		<div style="display: inline-table; text-align: right;">
+		<div id="forms" style="display: inline-table; text-align: right;">
 			<div style="text-align: left;">ログインフォーム<br></div>
 			<?php error_login(); ?>
 			<form method="POST" action="index?request=login">
@@ -38,8 +40,11 @@ class View {
 		}
 		else {
 			?>
-			<span>ユーザー名：<?php echo $_COOKIE['name']; ?> でログイン中<br>
-			<a href="index?request=logout">ログアウト</a></span>
+			<div id="forms">
+				ユーザー名：<?php echo $_COOKIE['name']; ?> でログイン中<br>
+				<a href="index?request=logout">ログアウト</a>
+				<a href="index?request=user_update">登録情報変更</a>
+			</div>
 			<?php
 		}
 	}
@@ -50,26 +55,22 @@ class View {
 			?> <input form="formtopic" type="hidden" name="admin"> <?php
 		}
 		?>
-		<table style="background-color: #ddd; margin: 5px;">
-			<tbody>
-				<tr>
-					<td>
-						新しく掲示板を作る<br>
-						<?php error_topic(); ?>
-						<form id="formtopic" enctype="multipart/form-data" method="post" action="index?request=add">
-							<label for="text1">タイトル：</label><input id="text1" type="text" name="title" placeholder=""><br>
-							<?php if(!isset($_COOKIE['name'])) { ?>
-								<label for="text2">名前：</label><input id="text2" type="text" name="pen_name"><br>
-							<?php } ?>
-							<label for="text3">内容：</label><textarea id="text3" name="contents" cols="50" rows="5"></textarea><br>
-							<label>画像：</label><input type="file" name="image"><br>
-							<label>削除キー：</label><input type="password" name="del_key" maxlength="4"><span style="font-size: 10px; color: red;">※設定しなかった場合は0000になります。</span><br>
-							<input type="submit" name="mktopic" value="作成">
-						</form>
-					</td>
-				</tr>
-			</tbody>
-		</table>
+		<div>
+			<div id="forms">
+				新しく掲示板を作る<br>
+				<?php error_topic(); ?>
+				<form id="formtopic" enctype="multipart/form-data" method="post" action="index?request=add">
+					<label for="text1">タイトル：</label><input id="text1" type="text" name="title" placeholder=""><br>
+					<?php if(!isset($_COOKIE['name'])) { ?>
+						<label for="text2">名前：</label><input id="text2" type="text" name="pen_name"><br>
+					<?php } ?>
+					<label for="text3">内容：</label><textarea id="text3" name="contents" cols="50" rows="5"></textarea><br>
+					<label>画像：</label><input type="file" name="image"><br>
+					<label>削除キー：</label><input type="password" name="del_key" maxlength="4"><span style="font-size: 10px; color: red;">※設定しなかった場合は0000になります。</span><br>
+					<input type="submit" name="mktopic" value="作成">
+				</form>
+			</div>
+		</div>
 		<?php
 	}
 	
@@ -82,7 +83,7 @@ class View {
 			<?php
 		}
 		?>
-		<div style="display: inline-block; background-color: #eee; margin: 5px;">
+			<div id="forms">
 			<?php error_comment(); ?>
 			<form id="formcontents" enctype="multipart/form-data" method="POST" action="index?request=add">
 				<?php if(!isset($_COOKIE['name'])) { ?>
@@ -102,7 +103,7 @@ class View {
 	
 	public function FormFindView() {
 		?>
-		<div style="display: inline-block; background-color: #eee; margin: 5px;">
+		<div id="forms">
 			<?php error_find(); ?>
 			<form method="GET" action="index.php">
 				<input type="hidden" name="request" value="find">
@@ -113,25 +114,30 @@ class View {
 		<?php
 	}
 	
-	public function FormSignupView() {
+	public function FormSignupView($message) {
+		if(func_num_args() == 2) {
+			$user_info = func_get_arg(1);
+		}
 		?>
-		<div style="display: inline-block; background-color: #eee; margin: 5px;">
-			新規ユーザーを追加します。<br>
-			<?php error_signup(); ?>
-			<form method="POST" action="index?request=signup">
-				<label for="input1">ID：</label><input id="input1" type="text" name="login_id"><br>
-				<label for="input2">パスワード：</label><input id="input2" type="text" name="password1"><br>
-				<label for="input3">パスワード（確認）：</label><input id="input3" type="text" name="password2"><br>
-				<label for="input4">名前：</label><input id="input4" type="text" name="name"><br>
-				<input type="submit" name="signup" value="登録"><br>
-			</form>
+		<div>
+			<div id="forms">
+				<?php echo $message; ?><br>
+				<?php error_signup(); ?>
+				<form method="POST" action="index?request=signup">
+					<label for="input1">ID：</label><input id="input1" type="text" name="login_id" value="<?php echo $user_info['login_id']; ?>"><br>
+					<label for="input2">パスワード：</label><input id="input2" type="password" name="password1"><br>
+					<label for="input3">パスワード（確認）：</label><input id="input3" type="password" name="password2"><br>
+					<label for="input4">名前：</label><input id="input4" type="text" name="name" value="<?php echo $user_info['name']; ?>"><br>
+					<input type="submit" name="signup" value="登録"><br>
+				</form>
+			</div>
 		</div>
 		<?php
 	}
 	
 	public function FormUpdateView($row, $admin) {
 		?>
-		<div style="display: inline-block; background-color: #eee; margin: 5px;">
+		<div id="forms">
 			上記の内容を更新します。<br>
 			<?php error_delete(); ?>
 			<form enctype="multipart/form-data" method="POST" action="index?request=update">
@@ -153,7 +159,7 @@ class View {
 	
 	public function FormTopicDeleteView($title, $board_id) {
 		?>
-		<div style="display: inline-block; background-color: #eee; margin: 5px;">
+		<div id="forms">
 			トピック：<?php echo $title; ?> を削除します。<br>
 			<?php error_delete(); ?>
 			<form method="POST" action="index?request=delete">
@@ -167,45 +173,53 @@ class View {
 
 	public function FormCommentDeleteView($row) {
 		?>
-		上記の内容を削除します。<br>
-		<?php error_delete(); ?>
-		<form method="POST" action="index?request=delete">
-			<label for="item1">削除キー：</label><input id="item1" type="password" name="del_key" maxlength="4"><br>
-			<input type="hidden" name="comment_id" value="<?php echo $row['id']; ?>">
-			<input type="submit" name="delete_comment" value="削除する">
-		</form>
+		<div id="forms">
+			上記の内容を削除します。<br>
+			<?php error_delete(); ?>
+			<form method="POST" action="index?request=delete">
+				<label for="item1">削除キー：</label><input id="item1" type="password" name="del_key" maxlength="4"><br>
+				<input type="hidden" name="comment_id" value="<?php echo $row['id']; ?>">
+				<input type="submit" name="delete_comment" value="削除する">
+			</form>
+		</div>
 		<?php
 	}
 
 	public function UserDelete() {
 		?>
-		現在ログイン中のユーザー <?php echo $_COOKIE['name']; ?> を削除します。<br>
-		<form method="POST" action="index?request=user_del">
-			<input type="submit" name="delete_user" value="削除する">
-		</form>
+		<div>
+			現在ログイン中のユーザー <?php echo $_COOKIE['name']; ?> を削除します。<br>
+			<form method="POST" action="index?request=user_del">
+				<input type="submit" name="delete_user" value="削除する">
+			</form>
+		</div>
 		<?php
 	}
 
 	public function BoardsView($boards) {
 		?>
-		<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
-			<thead>
-				<tr>
-					<td>タイトル</td>
-					<td>コメント数</td>
-					<td>最終投稿日時</td>
-				</tr>
-			</thead>
-			<tbody>
-				<?php foreach ($boards as $row) { ?>
-					<tr>
-						<td><?php echo '<a href="index?request=board&board_id='. $row['id'] .'">' . $row['title'] . '</a>'; ?></td>
-						<td><?php echo $row['count']; ?></td>
-						<td><?php echo $row['last_updated']; ?></td>
-					</tr>
-				<?php } ?>
-			</tbody>
-		</table>
+		<div>
+			<div id="boards" style="text-align: center;">
+				<table border="1" style="border-color: #aaa; border-collapse: collapse;">
+					<thead>
+						<tr>
+							<td>タイトル</td>
+							<td>コメント数</td>
+							<td>最終投稿日時</td>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ($boards as $row) { ?>
+							<tr>
+								<td><?php echo '<a href="index?request=board&board_id='. $row['id'] .'">' . $row['title'] . '</a>'; ?></td>
+								<td><?php echo $row['count']; ?></td>
+								<td><?php echo $row['last_updated']; ?></td>
+							</tr>
+						<?php } unset($row); ?>
+					</tbody>
+				</table>
+			</div>
+		</div>
 		<?php
 	}
 	
@@ -259,6 +273,8 @@ class View {
 }
 
 class AdminView extends View {
+	
+	/*
 	public function FormAdminLogin() {
 		?>
 		管理者としてログインします。<br>
@@ -270,33 +286,35 @@ class AdminView extends View {
 		</form>
 		<?php
 	}
+	*/
 	
 	//管理メニュー トピック一覧
 	public function AdminBoardsView($boards) {
 		?>
 		<div style="display: table;">
-			<div style="display: table-cell;">
+			<!--<div style="display: table-cell;">
 				<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
 					<thead><tr><td>削除</td></tr></thead>
 					<tbody>
 						
-						<?php foreach ($boards as $row) { ?>
+						<?php //foreach ($boards as $row) { ?>
 						<tr>
 							<td style="text-align: center;">
-								<input form="formboarddelete" type="checkbox" name="delete_board_id[]" value="<?php echo $row['id']; ?>">
+								<input form="formboarddelete" type="checkbox" name="delete_board_id[]" value="<?php //echo $row['id']; ?>">
 							</td>
 						</tr>
-						<?php } ?>
+						<?php //} unset($row); ?>
 						
 					</tbody>
 				</table>
-			</div>
+			</div>-->
 			<div style="display: table-cell;">
 				<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
-					<thead><tr><td>編集</td></tr></thead>
+					<thead><tr><td>削除</td><td>編集</td></tr></thead>
 					<tbody>
 						<?php foreach ($boards as $row) { ?>
 						<tr>
+							<td><input form="formboarddelete" type="checkbox" name="delete_board_id[]" value="<?php echo $row['id']; ?>"></td>
 							<td style="text-align: center;">
 								<form method="POST" action="index?request=admin&topic">
 									<input type="hidden" name="update_board_id" value="<?php echo $row['id']; ?>">
@@ -304,7 +322,7 @@ class AdminView extends View {
 								</form>
 							</td>
 						</tr>
-						<?php } ?>
+						<?php } unset($row); ?>
 					</tbody>
 				</table>
 			</div>
@@ -316,7 +334,6 @@ class AdminView extends View {
 			<form id="formboarddelete" method="POST" action="index?request=admin&topic">
 				<input type="submit" name="chkdelete" value="チェックした項目を削除">
 			</form>
-			
 		</div>
 		<?php
 	}
@@ -324,7 +341,7 @@ class AdminView extends View {
 	public function AdminBoardsDeleteCheckView($titles) {
 		?>
 		以下のトピックを削除します。<br>
-		<?php foreach ($titles as $title) {	echo $title.'<br>'; } ?>
+		<?php foreach ($titles as $title) {	echo $title.'<br>'; } unset($title); ?>
 		<br>
 		<form style="display: inline-block;" method="POST" action="index?request=admin&topic">
 			<input type="submit" name="delete" value="確認">
@@ -351,7 +368,7 @@ class AdminView extends View {
 					<tr>
 						<?php $this->AdminCommentsColumnsView($comment); ?>
 					</tr>
-				<?php } ?>
+				<?php } unset($comment) ?>
 			</tbody>
 		</table>
 		<br>
@@ -398,7 +415,6 @@ class AdminView extends View {
 	
 	//管理メニュー コメント一覧
 	public function AdminCommentsView($board_id, $title, $comments) {
-		//title, array(id, user_id, pen_name, contents, image, created_at, user_name, img)
 		?>
 		<div style="display: table; background-color: #eee; margin-bottom: 10px; padding: 5px;">
 			ID：<span style="color: red;"><?php echo $board_id; ?></span> タイトル：<?php echo $title; ?>
@@ -421,12 +437,12 @@ class AdminView extends View {
 						<td>
 							<form method="POST" action="index?request=admin&comment">
 								<input type="hidden" name="update_comment_id" value="<?php echo $row['id']; ?>">
-								<input style="margin: auto;" type="submit" name="chkupdate" value="編集">
+								<input style="margin: 0px;" type="submit" name="chkupdate" value="編集">
 							</form>
 						</td>
-						<?php $this->AdminCommentsColumnsView($row) ?>
+						<?php $this->AdminCommentsColumnsView($row); ?>
 					</tr>
-					<?php } ?>
+					<?php } unset($row); ?>
 				</tbody>
 			</table>
 		</div>
@@ -452,15 +468,12 @@ class AdminView extends View {
 	}
 	
 	//管理メニュー ユーザー一覧
-	public function AdminUsersView($users) {
-		if(isset($_POST['chkdelete'])) { $display = "none"; $name = "delete"; ?>以下のユーザーを削除します。<?php }
-		else { $display = ""; $name = "chkdelete"; }
-		?>
-		<div style="display: table; background-color: #eee; margin-bottom: 10px; padding: 5px;">
+	public function AdminUsersView($users, $display, $name) {
+		?><div style="display: inline-block; background-color: #eee; margin: 0px; padding: 5px;">
 			<table border="1">
 				<thead>
 					<tr>
-						<td style="display: <?php echo $display; ?>">削除</td>
+						<td style="display: <?php echo $display[0]; ?>">削除</td>
 						<td>id</td>
 						<td>login_id</td>
 						<td>password</td>
@@ -470,7 +483,7 @@ class AdminView extends View {
 				<tbody>
 					<?php foreach($users as $row) { ?>
 					<tr>
-						<td style="display: <?php echo $display; ?>;">
+						<td style="display: <?php echo $display[0]; ?>;">
 							<input form="formuserdelete" type="checkbox" name="delete_user_id[]" value="<?php echo $row['id']; ?>">
 						</td>
 						<td><?php echo $row['id']; ?></td>
@@ -478,36 +491,107 @@ class AdminView extends View {
 						<td><?php echo $row['password']; ?></td>
 						<td><?php echo $row['name']; ?></td>
 					</tr>
-					<?php } ?>
+					<?php } unset($row); ?>
 				</tbody>
 			</table>
-			<form id="formuserdelete" method="POST" action="index?request=admin&user">
+			<form style="display: <?php echo $display[1]; ?>;" id="formuserdelete" method="POST" action="index?request=admin&user">
 				<input type="submit" name="<?php echo $name; ?>" value="チェックした項目を削除">
 			</form>
 		</div>
 		<?php
 	}
-	
-	public function FormAdminSettingView($message, $current_num) {
+	public function AdminUsersAuthorityView($users) {
 		?>
-		<?php error_admin(); ?>
-		<?php	echo $message; ?><br>
-		現在の数値：<?php echo $current_num; ?><br>
-		<form method="POST" action="">
-			<input type="text" name="set">
-			<input type="submit" name="change" value="変更">
+		<div style="display: inline-block; background-color: #eee; margin: 0px; padding: 5px;">
+			<table border="1">
+				<thead><tr><td>管理権限</td><td>編集</td></tr></thead>
+				<tbody>
+					<?php foreach ($users as $row) { ?>
+					<tr>
+						<td style="text-align: center;"><?php if($row['admin']){ echo '有'; }else{	 echo '無'; } ?></td>
+						<td>
+							<form method="POST" action="index?request=admin&settings&authority">
+								<input type="hidden" name="update_user_id" value="<?php echo $row['id']; ?>">
+								<input style="margin: 0px;" type="submit" name="chkupdate" value="編集">
+							</form>
+						</td>
+					</tr>
+					<?php } ?>
+				</tbody>
+			</table>
+		</div>
+		<?php
+	}
+	public function AdminUsersAuthorityChangeView($user_name, $user_info) {
+		?>
+		<div>
+			ユーザー：<?php echo $user_name; ?>の権限を変更します。<br>
+			<form method="POST" action="#">
+				<label for="radio1">管理者</label><input id="radio1" type="radio" name="authority" <?php echo $user_info[0]; ?> value="on">&nbsp;&nbsp;
+				<label for="radio2">一般</label><input id="radio2" type="radio" name="authority" <?php echo $user_info[1]; ?> value="off"><br>
+				<input type="hidden" name="user_id" value="<?php echo $_POST['update_user_id']; ?>">
+				<input type="submit" name="update" value="変更">
+			</form>
+		</div>
+		<?php
+	}
+
+		public function FormAdminSettingView($message, $current_num) {
+		?>
+		<div style="margin: 10px;">
+			<?php error_admin(); ?>
+			<?php	echo $message; ?><br>
+			<?php if(!empty($current_num)) { ?>
+				現在の数値：<?php echo $current_num; ?><br>
+			<?php } ?>
+			<form method="POST" action="#">
+				<input type="text" name="set">
+				<input type="submit" name="submit" value="変更">
+			</form>
+		</div>
+		<?php
+	}
+	
+	public function AdminNgwordView($ngwords, $display, $name) {
+		?>
+		<table border="1">
+			<thead>
+				<td style="display: <?php echo $display; ?>;">削除</td>
+				<td>NGワード</td>
+			</thead>
+			<tbody>
+				<?php $i=0; foreach ($ngwords as $ngword) { ?>
+				<tr>
+					<td style="display: <?php echo $display; ?>;">
+						<input form="formngworddelete" type="checkbox" name="delete_ngword[]" value="<?php echo $i; ?>">
+					</td>
+					<td><?php echo $ngword; ?></td>
+				</tr>
+				<?php $i++; } unset($ngword); ?>
+			</tbody>
+		</table>
+		<form id="formngworddelete" method="POST" action="#">
+			<input type="submit" name="<?php echo $name; ?>" value="チェックした項目を削除">
 		</form>
 		<?php
 	}
 	
-	public function AdminNgwordView() {
+	
+	public function AdminColorLayoutView($message, $name, $color) {
 		?>
-		現在のNGワード<br>
-		<?php foreach ($ngwords as $ngword) {	echo $ngword. '<br>'; } ?>
-		<?php $this->FormAdminSettingView($message, $current_num); ?>
+		<div>
+			<div style="display: inline-block; background-color: #fff; padding: 5px;">
+				<?php echo $message; ?>
+				<div style="background-color: <?php echo $color; ?>; border: solid 1px; display: inline-block; width: 60px;">　</div>
+				<form style="display: inline;" method="POST" action="#">
+					<input type="color" name="new_color">
+					<input type="hidden" name="name" value="<?php echo $name; ?>">
+					<input type="submit" name="change" value="変更">
+				</form>
+			</div>
+		</div>
 		<?php
 	}
-	
 }
 
 ?>

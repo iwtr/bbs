@@ -96,7 +96,12 @@ switch ($request) {
 			$signupcontroller->signupAction();
 		}
 		else {
-			page_title("ユーザー登録", 'FormSignupView');
+			$view = new View();
+			$page_title = 'ユーザー登録';
+			$message = '新規ユーザーを追加します。';
+			require_once 'header.php';
+			$view->FormSignupView($message);
+			require_once 'footer.php';
 		}
 		break;
 	
@@ -112,24 +117,41 @@ switch ($request) {
 		}
 		break;
 	
-	//管理者用
-	case 'admin':
-		$admincontroller = new AdminController();
-		if(isset($_GET['logout'])) {
-			$admincontroller->adminlogoutAction();
-		}
-		else if(isset($_COOKIE['admin_name'])) {
-			$admincontroller->adminAction();
-		}
-		else if(isset($_POST['admin_login'])) {
-			$admincontroller->adminloginAction();
+	//ユーザー情報変更
+	case 'user_update':
+		if(isset($_POST['update'])) {
+			$userupdatecontroller = new UserUpdateController();
+			$userupdatecontroller->userupdateAction();
 		}
 		else {
-			$adminview = new AdminView();
-			page_title("管理者用ログイン", 'FormAdminLogin');
+			$view = new View();
+			$adminmodel = new AdminModel();
+			$user_info = $adminmodel->check_user($_COOKIE['id']);
+			$message = 'ユーザー情報を変更します。';
+			$view->FormSignupView($message, $user_info);
 		}
 		break;
 	
+	//管理者用
+	case 'admin':
+		$admincontroller = new AdminController();
+		//if(isset($_GET['logout'])) {
+		//	$admincontroller->adminlogoutAction();
+		//}
+		if($_COOKIE['admin']) {
+			$admincontroller->adminAction();
+		}
+		//else if(isset($_POST['admin_login'])) {
+		//	$admincontroller->adminloginAction();
+		//}
+		else {
+			$adminview = new AdminView();
+			echo '管理者権限のあるユーザーでログインして下さい。<br>';
+			page_title("ログイン", 'FormLoginView');
+		}
+		break;
+	
+	//画像の原寸表示
 	case 'image':
 		if(isset($_GET['name'])) {
 			$view = new View();

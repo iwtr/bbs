@@ -2,6 +2,7 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" type="text/css" href="css.php">
 	<title>掲示板_表示</title>
 </head>
 <body>
@@ -13,7 +14,7 @@
 		<?php $view->FormLoginView(); ?>
 	</div>
 	
-	<div style="background-color: #eee; margin: 0px auto; padding: 10px; width: 900px;">
+	<div id="board_outerbox" style="margin: 0px auto; padding: 10px; width: 900px;">
 		<div style="text-align: center; color: red; font-size: 20px;">
 			<?php echo $title; ?>
 			
@@ -25,7 +26,7 @@
 			</div>
 			
 		</div>
-		<table style="background-color: #ccc; margin: 0px auto; width: 100%;">
+		<table id="board_innerbox" style="margin: 0px auto; width: 100%;">
 			<tbody>
 				<?php
 				foreach ($comments as $row) {
