@@ -30,4 +30,6 @@ form {
 #boards {
 	background-color: <?php echo boards_bgcolor; ?>;
 	display: inline-block;
+	border-color: #aaa;
+	border-collapse: collapse;
 }

@@ -10,11 +10,23 @@
 	<?php $view->MenuView(); ?>
 	<?php $view->FormLoginView(); ?>
 	
-	<div style="margin: 0px auto;">
-		<span style="text-align: center;">
-			<?php $view->FormTopicView(); ?>
-			<?php $view->BoardsView($boards); ?>
-		</span>
+	<div style="margin: 0px auto; text-align: center;">
+		<?php $view->FormTopicView(); ?>
+		<div style="display: inline-table;">
+			<div style="display: table-cell;"><?php $view->BoardsView($boards); ?></div>
+			<div style="display: table-cell;">
+				<table id="boards" border="1">
+					<thead><tr><td style="width: 40px;">&nbsp;</td></tr></thead>
+					<tbody>
+						<?php foreach ($boards as $row) { ?>
+						<tr>
+							<td><?php if(in_array($row['id'], $new_boards)) { echo 'new'; } else { echo '&nbsp;'; } ?></td>
+						</tr>
+						<?php } ?>
+					</tbody>
+				</table>
+			</div>
+		</div>
 	</div>
 	<br>
 	<div style="text-align: right;">

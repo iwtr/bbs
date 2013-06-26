@@ -15,6 +15,8 @@ class TopController {
 		
 		unset($_SESSION['page']);
 		$boards = $model->get_boards();
+		$new_boards = $model->newupdate_check();
+		print_r($new_boards);
 		$view = new View();
 		require_once 'view_top.php';
 	}
@@ -43,17 +45,22 @@ class BoardController {
 		if($start + page_limit <= $count) {
 			$page_exist[1] = TRUE;
 		}
+		/*
 		echo 'count:'. $count.'<br>';
 		echo 'page:'. $_SESSION['page'].'<br>';
 		echo 'start:'. $start.'<br>';
 		echo 'page_limit:'. page_limit.'<br>';
-		
-		
-		$title = $model->get_title($board_id);
-		//$comments = $model->get_comments($board_id);
-		$comments = $model->get_comments_page($board_id, $start, page_limit);
-		
-		require_once 'view_board.php';
+		*/
+		if($model->board_id_exist($board_id)) {
+			$title = $model->get_title($board_id);
+			//$comments = $model->get_comments($board_id);
+			$comments = $model->get_comments_page($board_id, $start, page_limit);
+
+			require_once 'view_board.php';
+		}
+		else {
+			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+		}
 	}
 }
 
@@ -178,9 +185,10 @@ class UpdateController {
 		}
 		
 		//削除キーが合ってるかどうか
-		if($model->check_del_key($comment_id, $del_key) || isset($_POST['admin'])) {
+		if($model->check_del_key($comment_id, $del_key) || $_COOKIE['admin']) {
 			$newcomment = mysqli_real_escape_string($connect, trim($_POST['newcomm']));
 			$model->update_comment($comment_id, $newcomment, $img_del);
+			$model->last_updated($board_id);
 			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . $url);
 		}
 		else {
@@ -216,7 +224,7 @@ class DeleteController {
 		
 		$board_id = $_POST['board_id'];
 		$del_key = $_POST['del_key'];
-		if($model->check_topic_del_key($board_id, $del_key)) {
+		if($model->check_topic_del_key($board_id, $del_key) || $_COOKIE['admin']) {
 			$model->del_topic($board_id);
 			header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
 			exit();
@@ -251,8 +259,9 @@ class DeleteController {
 		$comment_id = $_POST['comment_id'];
 		$del_key = $_POST['del_key'];
 		$board_id = $model->cid_to_bid($comment_id);
-		if($model->check_del_key($comment_id, $del_key)) {
+		if($model->check_del_key($comment_id, $del_key) || $_COOKIE['admin']) {
 			if(!$model->del_comment($comment_id)) {
+				$model->last_updated($board_id);
 				header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=board&board_id=' . $board_id);
 			}
 			else {
@@ -300,7 +309,6 @@ class FindController {
 
 //ログイン
 class LoginController {
-	
 	public function loginAction() {
 		global $connect;
 		$login_id = mysqli_real_escape_string($connect, trim($_POST['login_id']));
@@ -346,7 +354,6 @@ class LogoutController {
 
 //ユーザー登録
 class SignupController {
-	
 	public function signupAction() {
 		global $connect;
 		$model = new Model();
@@ -355,20 +362,40 @@ class SignupController {
 		$password1 = mysqli_real_escape_string($connect, trim($_POST['password1']));
 		$password2 = mysqli_real_escape_string($connect, trim($_POST['password2']));
 		$name = mysqli_real_escape_string($connect, trim($_POST['name']));
-
-		if(!empty($login_id) && !empty($password1) && !empty($password2) && !empty($name)) {
+		$address1 = mysqli_real_escape_string($connect, trim($_POST['address1']));
+		$address2_1 = mysqli_real_escape_string($connect, trim($_POST['address2_1']));
+		$address2_2 = mysqli_real_escape_string($connect, trim($_POST['address2_2']));
+		
+		if(isset($_COOKIE['name'])) {
+			setcookie("id", $_COOKIE['id'], time()-1);
+			setcookie("name", $_COOKIE['name'], time()-1);
+			setcookie('admin', $_COOKIE['admin'], time()-1);
+		}
+		
+		if(!empty($login_id) && !empty($password1) && !empty($password2) && !empty($name) && !empty($address1) && !empty($address2_1) && !empty($address2_2)) {
 			if(mb_strlen($name) <= 11) {
-				if($password1 == $password2) {
+				$pos = strpos($address1, '@');
+				if($pos !== FALSE){
+					$address2 = $address2_1.'@'.$address2_2;
 
-					if($model->user_signup($login_id, $password1, $name)) {
-						$model->check_login($login_id, $password1);
-						
-						header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
-						exit();
+					if(($password1 == $password2) && ($address1 == $address2)) {
+						if($model->user_signup($login_id, $password1, $name, $address1)) {
+							$model->check_login($login_id, $password1);
+							
+							$subject = "test";
+							$message = "http://127.0.0.1/~iwagaya/bbs/index.php";
+							mail($address1, $subject, $message);
+							
+							header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index.php');
+							exit();
+						}
+					}
+					else {
+						$_SESSION['err_signup'] = 21;
 					}
 				}
 				else {
-					$_SESSION['err_signup'] = 21;
+					//アドレスでない
 				}
 			}
 			else {
@@ -402,7 +429,8 @@ class UserUpdateController {
 	
 	public function userupdateAction() {
 		$model = new Model();
-		
+		echo 'upd';
+		//$model->user_update();
 	}
 }
 
@@ -579,9 +607,11 @@ class AdminController {
 				$display = array('');
 				$name = 'chkdelete';
 				$page_title = "登録ユーザー一覧";
+				$message = '新規ユーザー登録';
+				$submit = 'signup';
 				require_once 'header.php';
 				$adminview->AdminUsersView($users, $display, $name);
-				$adminview->FormSignupView();
+				$adminview->FormSignupView($message, $submit);
 				require_once 'footer.php';
 			}
 		}
@@ -619,7 +649,10 @@ class AdminController {
 				else {
 					$message = '１ページ内でのコメント表示数を変更します';
 					$current_num = page_limit;
+					$page_title = '表示件数設定';
+					require_once 'header.php';
 					$adminview->FormAdminSettingView($message, $current_num);
+					require_once 'footer.php';
 				}
 			}
 			
@@ -650,8 +683,11 @@ class AdminController {
 							$i++;
 						}
 						$display = "none"; $name = "delete";
+						$page_title = '削除確認';
+						require_once 'header.php';
 						echo '以下のNGワードを削除します。';
 						$adminview->AdminNgwordView($ngwords, $display, $name);
+						require_once 'footer.php';
 					}
 				}
 				else if(isset($_POST['delete'])) {
@@ -678,9 +714,11 @@ class AdminController {
 					$message = 'NGワード追加フォーム';
 					$current_num='';
 					$display = ""; $name = "chkdelete";
-					
+					$page_title = 'NGワード一覧';
+					require_once 'header.php';
 					$adminview->AdminNgwordView($ngwords, $display, $name);
 					$adminview->FormAdminSettingView($message, $current_num);
+					require_once 'footer.php';
 				}
 			}
 			
@@ -761,13 +799,58 @@ class AdminController {
 							forms_bgcolor,
 							boards_bgcolor,
 							background
-							);
+					);
 					require_once 'header.php';
 					for($i=0; $i<=count($message)-1; $i++) {
 						$adminview->AdminColorLayoutView($message[$i], $name[$i], $color[$i]);
 					}
+					echo '<input type="button" value="戻る" onclick="history.back();">';
 					require_once 'footer.php';
 				}
+			}
+			
+			else if(isset($_GET['news'])) {
+				if(isset($_POST['submit'])) {
+					if(ctype_digit($_POST['set'])) {
+						if(!strlen($time)==2) {
+							$filename = 'bbssettings.php';
+							$searchstr = 'new_time';
+							$time = $_POST['set'];
+
+							$adminmodel->file_rewrite($filename, $searchstr, "'".$time."'");
+						}
+						else {
+							//2桁でない
+							$_SESSION['err_admin'] = '';
+						}
+					}
+					else {
+						//数字でない
+						$_SESSION['err_admin'] = '';
+					}
+					header('Location: http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/index?request=admin');
+					exit();
+				}
+				else {
+					$message = 'トップ画面で「new」を表示する時間を設定します。<br>2桁での指定(01~99)';
+					$current_num = new_time;
+					$adminview->FormAdminSettingView($message, $current_num);
+				}
+			}
+			
+			else if(isset($_GET['test'])) {
+				//print_r($adminmodel->newupdate_check());
+				$a = $adminmodel->newupdate_check();
+				foreach ($a as $value) {
+					foreach ($value as $value2) {
+						print_r($value2);
+						echo ' ';
+					}
+					echo '<br>';
+				}
+				$time = '010000';
+				$time = date('H:i:s', strtotime($time));
+				//echo $time;
 			}
 		}
 		

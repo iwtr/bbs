@@ -161,10 +161,11 @@ class Model {
 	public function del_topic($board_id) {
 		global $connect;
 
-		$sql = "delete board, comment from board, comment where board.id='$board_id' and comment.board_id='$board_id';";
-		$result = mysqli_query($connect, $sql) or die('error');
-
-
+		//$sql = "delete board, comment from board, comment where board.id='$board_id' and comment.board_id='$board_id';";
+		$sql = "delete from board where id='$board_id';";
+		$result = mysqli_query($connect, $sql) or die('error(board_delete)');
+		$sql = "delete from comment where id='$board_id';";
+		$result = mysqli_query($connect, $sql) or die('error(comment_delete)');
 	}
 
 	//全てのboard取得
@@ -329,7 +330,7 @@ class Model {
 	}
 
 	//新規ユーザー登録
-	public function user_signup($login_id, $password, $name) {
+	public function user_signup($login_id, $password, $name, $address) {
 		global $connect;
 
 		//既に同じ名前があるか
@@ -337,7 +338,7 @@ class Model {
 		$result = mysqli_query($connect, $sql) or die('error');
 		if(mysqli_num_rows($result) == 0) {
 			$password = sha1($password);
-			$sql = "insert into users(login_id, password, name) values('$login_id', '$password', '$name');";
+			$sql = "insert into users(login_id, password, name, address) values('$login_id', '$password', '$name', '$address');";
 			$result = mysqli_query($connect, $sql) or die('error');
 		}
 		else {
@@ -446,7 +447,33 @@ class Model {
 		unset($ngword);
 		return $str;
 	}
+	
+	public function newupdate_check() {
+		global $connect;
+		$time = new_time;
+		
+		//$sql = "select id from board where timediff(now(), last_updated)<='$time:00:00'";
+		$sql = "select id, title, timediff(now(), last_updated) as time from board;";
+		$result = mysqli_query($connect, $sql);
+		
+		while($row = mysqli_fetch_assoc($result)) {
+			if($time >= str_replace(':', '', $row['time'])) {
+				//$ids[] = $row['id'];
+				$rows[] = $row['id'];
+				$rows[] = $row['time'];
+			}
+			$ids[] = $rows;
+		}
+		if($ids == NULL) {
+			$ids = array();
+		}
+		return $ids;
+	}
+	
 }
+
+
+
 
 class AdminModel extends Model {
 	public function check_board($board_id) {

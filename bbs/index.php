@@ -99,8 +99,9 @@ switch ($request) {
 			$view = new View();
 			$page_title = 'ユーザー登録';
 			$message = '新規ユーザーを追加します。';
+			$submit = 'signup';
 			require_once 'header.php';
-			$view->FormSignupView($message);
+			$view->FormSignupView($message, $submit);
 			require_once 'footer.php';
 		}
 		break;
@@ -119,7 +120,7 @@ switch ($request) {
 	
 	//ユーザー情報変更
 	case 'user_update':
-		if(isset($_POST['update'])) {
+		if(isset($_POST['user_update'])) {
 			$userupdatecontroller = new UserUpdateController();
 			$userupdatecontroller->userupdateAction();
 		}
@@ -128,7 +129,11 @@ switch ($request) {
 			$adminmodel = new AdminModel();
 			$user_info = $adminmodel->check_user($_COOKIE['id']);
 			$message = 'ユーザー情報を変更します。';
-			$view->FormSignupView($message, $user_info);
+			$submit = 'user_update';
+			$page_title = 'ユーザー情報編集';
+			require_once 'header.php';
+			$view->FormSignupView($message, $submit, $user_info);
+			require_once 'footer.php';
 		}
 		break;
 	

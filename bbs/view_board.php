@@ -79,6 +79,8 @@
 			<?php $view->FormContentsView(); ?>
 		</div>
 	</div>
-	<input type="button" onClick="location.href='index.php';" value="掲示板一覧に戻る">
+	<div style="text-align: center;">
+		<input type="button" onClick="location.href='index.php';" value="掲示板一覧に戻る">
+	</div>
 </body>
 </html>

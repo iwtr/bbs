@@ -41,7 +41,7 @@ class View {
 		else {
 			?>
 			<div id="forms">
-				ユーザー名：<?php echo $_COOKIE['name']; ?> でログイン中<br>
+				ユーザー名：<?php echo $_COOKIE['name']; if($_COOKIE['admin']){echo '(管理者)';} ?> でログイン中<br>
 				<a href="index?request=logout">ログアウト</a>
 				<a href="index?request=user_update">登録情報変更</a>
 			</div>
@@ -114,21 +114,24 @@ class View {
 		<?php
 	}
 	
-	public function FormSignupView($message) {
-		if(func_num_args() == 2) {
-			$user_info = func_get_arg(1);
+	public function FormSignupView($message, $submit) {
+		if(func_num_args() == 3) {
+			$user_info = func_get_arg(2);
 		}
 		?>
 		<div>
 			<div id="forms">
 				<?php echo $message; ?><br>
 				<?php error_signup(); ?>
-				<form method="POST" action="index?request=signup">
-					<label for="input1">ID：</label><input id="input1" type="text" name="login_id" value="<?php echo $user_info['login_id']; ?>"><br>
-					<label for="input2">パスワード：</label><input id="input2" type="password" name="password1"><br>
-					<label for="input3">パスワード（確認）：</label><input id="input3" type="password" name="password2"><br>
-					<label for="input4">名前：</label><input id="input4" type="text" name="name" value="<?php echo $user_info['name']; ?>"><br>
-					<input type="submit" name="signup" value="登録"><br>
+				<form method="POST" action="index?request=<?php echo $submit; ?>">
+					<label for="input1">ID：</label><input id="input1" type="text" name="login_id" value="<?php echo $user_info['login_id']; ?>" required><br>
+					<label for="input2">パスワード：</label><input id="input2" type="password" name="password1" required><br>
+					<label for="input3">パスワード（確認）：</label><input id="input3" type="password" name="password2" required><br>
+					<label for="input4">名前：</label><input id="input4" type="text" name="name" value="<?php echo $user_info['name']; ?>" required><br>
+					<label for="input5">メールアドレス：</label>
+					<input id="input5" type="text" name="address1" value="<?php echo $user_info['address']; ?>" required><br>
+					<label for="input6">メールアドレス（確認）：</label><input id="input6" type="text" name="address2_1" required><label for="input7">＠</label><input id="input7" type="text" name="address2_2" required><br>
+					<input type="submit" name="<?php echo $submit; ?>" value="登録"><br>
 				</form>
 			</div>
 		</div>
@@ -184,7 +187,7 @@ class View {
 		</div>
 		<?php
 	}
-
+	
 	public function UserDelete() {
 		?>
 		<div>
@@ -198,31 +201,29 @@ class View {
 
 	public function BoardsView($boards) {
 		?>
-		<div>
-			<div id="boards" style="text-align: center;">
-				<table border="1" style="border-color: #aaa; border-collapse: collapse;">
-					<thead>
+		<div style="text-align: center;">
+			<table id="boards" border="1">
+				<thead>
+					<tr>
+						<td>タイトル</td>
+						<td>コメント数</td>
+						<td>最終更新日時</td>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ($boards as $row) { ?>
 						<tr>
-							<td>タイトル</td>
-							<td>コメント数</td>
-							<td>最終投稿日時</td>
+							<td><a href="index?request=board&board_id=<?php echo $row['id'];?>"><?php echo $row['title']; ?></a></td>
+							<td><?php echo $row['count']; ?></td>
+							<td><?php echo $row['last_updated']; ?></td>
 						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ($boards as $row) { ?>
-							<tr>
-								<td><?php echo '<a href="index?request=board&board_id='. $row['id'] .'">' . $row['title'] . '</a>'; ?></td>
-								<td><?php echo $row['count']; ?></td>
-								<td><?php echo $row['last_updated']; ?></td>
-							</tr>
-						<?php } unset($row); ?>
-					</tbody>
-				</table>
-			</div>
+					<?php } unset($row); ?>
+				</tbody>
+			</table>
 		</div>
 		<?php
 	}
-	
+
 	public function UpdateDeleteCheckView($row) {
 		?>
 		<table border="1">
@@ -257,7 +258,7 @@ class View {
 	
 	public function page_button($board_id, $page_exist) {
 		?>
-		<div style="background-color: #eee; margin: auto; width: 100px;">
+		<div style="margin: auto; width: 100px;">
 			<span style="font-size: 20px; text-align: center;">
 				<?php if($page_exist[0]) { ?>
 					<a href="index?request=board&board_id=<?php echo $board_id; ?>&prev">&lt;&lt;</a>
@@ -292,24 +293,8 @@ class AdminView extends View {
 	public function AdminBoardsView($boards) {
 		?>
 		<div style="display: table;">
-			<!--<div style="display: table-cell;">
-				<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
-					<thead><tr><td>削除</td></tr></thead>
-					<tbody>
-						
-						<?php //foreach ($boards as $row) { ?>
-						<tr>
-							<td style="text-align: center;">
-								<input form="formboarddelete" type="checkbox" name="delete_board_id[]" value="<?php //echo $row['id']; ?>">
-							</td>
-						</tr>
-						<?php //} unset($row); ?>
-						
-					</tbody>
-				</table>
-			</div>-->
-			<div style="display: table-cell;">
-				<table border="1" style=" background-color: #ddd; border-color: #aaa; border-collapse: collapse; margin-top: 5px;">
+			<div style="display: table-cell; vertical-align: top;">
+				<table id="boards" border="1" style="margin-right: 1px;">
 					<thead><tr><td>削除</td><td>編集</td></tr></thead>
 					<tbody>
 						<?php foreach ($boards as $row) { ?>
@@ -334,6 +319,9 @@ class AdminView extends View {
 			<form id="formboarddelete" method="POST" action="index?request=admin&topic">
 				<input type="submit" name="chkdelete" value="チェックした項目を削除">
 			</form>
+		</div>
+		<div style="">
+			<input type="button" value="戻る" onclick="history.back();">
 		</div>
 		<?php
 	}
@@ -375,7 +363,9 @@ class AdminView extends View {
 		<form style="display: inline-block;" method="POST" action="index?request=admin&comment">
 			<input type="submit" name="delete" value="確認">
 		</form>
-		<input type="button" onClick="location.href='<?php echo $_SERVER['HTTP_REFERER']; ?>';" value="戻る">
+		<div style="">
+			<input type="button" value="戻る" onclick="history.back();">
+		</div>
 		<?php
 	}
 	
@@ -409,6 +399,9 @@ class AdminView extends View {
 				<input type="hidden" name="board_id" value="<?php echo $row['id']; ?>">
 				<input type="submit" name="update" value="更新する">
 			</form>
+		</div>
+		<div style="">
+			<input type="button" value="戻る" onclick="history.back();">
 		</div>
 		<?php
 	}
@@ -446,6 +439,9 @@ class AdminView extends View {
 				</tbody>
 			</table>
 		</div>
+		<div style="">
+			<input type="button" value="戻る" onclick="history.back();">
+		</div>
 		<?php
 	}
 	public function AdminCommentsColumnsView($row) {
@@ -469,7 +465,8 @@ class AdminView extends View {
 	
 	//管理メニュー ユーザー一覧
 	public function AdminUsersView($users, $display, $name) {
-		?><div style="display: inline-block; background-color: #eee; margin: 0px; padding: 5px;">
+		?>
+		<div style="background-color: #eee; margin: 0px; padding: 5px;">
 			<table border="1">
 				<thead>
 					<tr>
@@ -497,6 +494,9 @@ class AdminView extends View {
 			<form style="display: <?php echo $display[1]; ?>;" id="formuserdelete" method="POST" action="index?request=admin&user">
 				<input type="submit" name="<?php echo $name; ?>" value="チェックした項目を削除">
 			</form>
+		</div>
+		<div style="">
+			<input type="button" value="戻る" onclick="history.back();">
 		</div>
 		<?php
 	}
@@ -533,6 +533,9 @@ class AdminView extends View {
 				<input type="submit" name="update" value="変更">
 			</form>
 		</div>
+		<div style="">
+			<input type="button" value="戻る" onclick="history.back();">
+		</div>
 		<?php
 	}
 
@@ -542,7 +545,7 @@ class AdminView extends View {
 			<?php error_admin(); ?>
 			<?php	echo $message; ?><br>
 			<?php if(!empty($current_num)) { ?>
-				現在の数値：<?php echo $current_num; ?><br>
+				現在の設定：<?php echo $current_num; ?><br>
 			<?php } ?>
 			<form method="POST" action="#">
 				<input type="text" name="set">
@@ -573,6 +576,9 @@ class AdminView extends View {
 		<form id="formngworddelete" method="POST" action="#">
 			<input type="submit" name="<?php echo $name; ?>" value="チェックした項目を削除">
 		</form>
+		<div style="">
+			<input type="button" value="戻る" onclick="history.back();">
+		</div>
 		<?php
 	}
 	

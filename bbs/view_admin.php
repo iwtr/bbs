@@ -21,6 +21,8 @@
 			<li><a href="index?request=admin&settings&ngword">禁止ワードの設定</a></li>
 			<li><a href="index?request=admin&settings&authority">権限の操作</a></li>
 			<li><a href="index?request=admin&settings&color">色変更</a></li>
+			<li><a href="index?request=admin&settings&news">トップ画面での new 表示時間</a></li>
+			<li><a href="index?request=admin&settings&test">test</a></li>
 			<li style="list-style-type: none; height: 15px;"></li>
 			<li><a href="index?request=logout">ログアウト</a></li>
 		</ul>
