@@ -832,7 +832,7 @@ class AdminController {
 					exit();
 				}
 				else {
-					$message = 'トップ画面で「new」を表示する時間を設定します。<br>2桁での指定(01~99)';
+					$message = 'トップ画面で「new」を表示する時間を設定します。';
 					$current_num = new_time;
 					$adminview->FormAdminSettingView($message, $current_num);
 				}
