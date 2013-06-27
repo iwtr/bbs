@@ -1,5 +1,5 @@
-<?php session_start(); ?>
 <?php
+session_start();
 
 class View {
 	
@@ -65,7 +65,7 @@ class View {
 						<label for="text2">名前：</label><input id="text2" type="text" name="pen_name"><br>
 					<?php } ?>
 					<label for="text3">内容：</label><textarea id="text3" name="contents" cols="50" rows="5"></textarea><br>
-					<label>画像：</label><input type="file" name="image"><br>
+					<label>画像：</label><input type="file" name="image" value=""><br>
 					<label>削除キー：</label><input type="password" name="del_key" maxlength="4"><span style="font-size: 10px; color: red;">※設定しなかった場合は0000になります。</span><br>
 					<input type="submit" name="mktopic" value="作成">
 				</form>
@@ -138,7 +138,7 @@ class View {
 		<?php
 	}
 	
-	public function FormUpdateView($row, $admin) {
+	public function FormUpdateView($row, $admin, $img) {
 		?>
 		<div id="forms">
 			上記の内容を更新します。<br>
@@ -236,7 +236,7 @@ class View {
 			<tbody>
 				<tr>
 					<td>
-						<?php echo $row['contents']; ?>
+						<?php echo nl2br($row['contents']); ?>
 					</td>
 					<td>
 						<?php if($row['img']) {
@@ -321,7 +321,7 @@ class AdminView extends View {
 			</form>
 		</div>
 		<div style="">
-			<input type="button" value="戻る" onclick="history.back();">
+			<input type="button" value="戻る" onclick="location.href='index?request=admin';">
 		</div>
 		<?php
 	}
@@ -334,11 +334,11 @@ class AdminView extends View {
 		<form style="display: inline-block;" method="POST" action="index?request=admin&topic">
 			<input type="submit" name="delete" value="確認">
 		</form>
-		<input type="button" onClick="location.href='<?php echo $_SERVER['HTTP_REFERER']; ?>';" value="戻る">
+		<input type="button" onClick="history.back();" value="戻る">
 		<?php
 	}
 	
-	public function AdminCommentsDeleteCheckView($comments) { //続き
+	public function AdminCommentsDeleteCheckView($comments) {
 		?>
 		以下のコメントを削除します。<br>
 		<table border="1">
@@ -440,7 +440,7 @@ class AdminView extends View {
 			</table>
 		</div>
 		<div style="">
-			<input type="button" value="戻る" onclick="history.back();">
+			<input type="button" value="戻る" onclick="location.href='index?request=admin';">
 		</div>
 		<?php
 	}
@@ -466,7 +466,7 @@ class AdminView extends View {
 	//管理メニュー ユーザー一覧
 	public function AdminUsersView($users, $display, $name) {
 		?>
-		<div style="background-color: #eee; margin: 0px; padding: 5px;">
+		<div style="background-color: #eee; display: inline-block; margin: 0px; padding: 5px;">
 			<table border="1">
 				<thead>
 					<tr>
@@ -496,7 +496,7 @@ class AdminView extends View {
 			</form>
 		</div>
 		<div style="">
-			<input type="button" value="戻る" onclick="history.back();">
+			<input type="button" value="戻る" onclick="location.href='index?request=admin';">
 		</div>
 		<?php
 	}
@@ -539,7 +539,7 @@ class AdminView extends View {
 		<?php
 	}
 
-		public function FormAdminSettingView($message, $current_num) {
+	public function FormAdminSettingView($message, $current_num) {
 		?>
 		<div style="margin: 10px;">
 			<?php error_admin(); ?>
@@ -555,6 +555,22 @@ class AdminView extends View {
 		<?php
 	}
 	
+	public function FormAdminTimeSettingView($message, $current_num) {
+		?>
+		<div style="margin: 10px;">
+			<?php error_admin(); ?>
+			<?php	echo $message; ?><br>
+			<?php if(!empty($current_num)) { ?>
+				現在の設定：<?php echo $current_num; ?><br>
+			<?php } ?>
+			<form method="POST" action="#">
+				<input type="text" name="hour" size="4">:<input type="text" name="min" size="4">:<input type="text" name="sec" size="4"><br>
+				<input type="submit" name="submit" value="変更">
+			</form>
+		</div>
+		<?php
+	}
+
 	public function AdminNgwordView($ngwords, $display, $name) {
 		?>
 		<table border="1">

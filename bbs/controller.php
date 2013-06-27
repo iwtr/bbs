@@ -16,7 +16,6 @@ class TopController {
 		unset($_SESSION['page']);
 		$boards = $model->get_boards();
 		$new_boards = $model->newupdate_check();
-		print_r($new_boards);
 		$view = new View();
 		require_once 'view_top.php';
 	}
@@ -55,7 +54,7 @@ class BoardController {
 			$title = $model->get_title($board_id);
 			//$comments = $model->get_comments($board_id);
 			$comments = $model->get_comments_page($board_id, $start, page_limit);
-
+			
 			require_once 'view_board.php';
 		}
 		else {
@@ -156,10 +155,11 @@ class UpdateController {
 		$comment_id = $_POST['comment_id'];
 		$row = $model->check_comment($comment_id);
 		$page_title = "更新";
+		$img = $model->image_exist($comment_id);
 		$admin = FALSE;
 		require_once 'header.php';
 		$view->UpdateDeleteCheckView($row);
-		$view->FormUpdateView($row, $admin);
+		$view->FormUpdateView($row, $admin, $img);
 		require_once 'footer.php';
 	}
 	
@@ -811,16 +811,29 @@ class AdminController {
 			
 			else if(isset($_GET['news'])) {
 				if(isset($_POST['submit'])) {
-					if(ctype_digit($_POST['set'])) {
-						if(!strlen($time)==2) {
+					$hour = $_POST['hour'];
+					$min = $_POST['min'];
+					$sec = $_POST['sec'];
+					if(empty($hour)) {$hour='0';}
+					if(empty($min)) {$min='0';}
+					if(empty($sec)) {$sec='0';}
+					if(ctype_digit($hour) && ctype_digit($min) && ctype_digit($sec)) {
+						$hour = (int) $_POST['hour'];
+						$min = (int) $_POST['min'];
+						$sec = (int) $_POST['sec'];
+						if(!($hour>838) && !($min>59) && !($sec>59)) {
+							$hour = sprintf("%03d", $hour);
+							$min = sprintf("%02d", $min);
+							$sec = sprintf("%02d", $sec);
+							
 							$filename = 'bbssettings.php';
 							$searchstr = 'new_time';
-							$time = $_POST['set'];
-
+							$time = $hour.':'.$min.':'.$sec;
+							
 							$adminmodel->file_rewrite($filename, $searchstr, "'".$time."'");
 						}
 						else {
-							//2桁でない
+							//数値が範囲外
 							$_SESSION['err_admin'] = '';
 						}
 					}
@@ -832,25 +845,19 @@ class AdminController {
 					exit();
 				}
 				else {
-					$message = 'トップ画面で「new」を表示する時間を設定します。';
+					$message = 'トップ画面で「new」を表示する時間を設定します。<br>範囲：000:00:00~838:59:59';
 					$current_num = new_time;
-					$adminview->FormAdminSettingView($message, $current_num);
+					$page_title = '設定';
+					require_once 'header.php';
+					$adminview->FormAdminTimeSettingView($message, $current_num);
+					require_once 'footer.php';
 				}
 			}
 			
 			else if(isset($_GET['test'])) {
-				//print_r($adminmodel->newupdate_check());
-				$a = $adminmodel->newupdate_check();
-				foreach ($a as $value) {
-					foreach ($value as $value2) {
-						print_r($value2);
-						echo ' ';
-					}
-					echo '<br>';
-				}
-				$time = '010000';
-				$time = date('H:i:s', strtotime($time));
-				//echo $time;
+				$time = -12;
+				echo $time.'<br>';
+				var_dump(is_int($time));
 			}
 		}
 		
@@ -925,6 +932,9 @@ function error_comment(){
 				break;
 			case 33:
 				$err = "存在しないboard_idです。";
+				break;
+			case 34:
+				$err = "ファイルが大きすぎるか形式がjpg,gif以外です。";
 				break;
 			case 98:
 				$err = "削除キーが英数字以外です。";

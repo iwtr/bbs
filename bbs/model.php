@@ -62,7 +62,9 @@ class Model {
 					move_uploaded_file($image_tmp, 'image/' . $image_name);
 				}
 				else {
-					//ファイルが大きすぎるか形式がjpg,gif以外です。
+					//$_SESSION['err_comment'] = 34;
+					$image_size = 0;
+					$image_name = NULL;
 				}
 			}
 		}
@@ -83,7 +85,7 @@ class Model {
 		$result = mysqli_query($connect, $sql) or die('error');
 		
 		$row = mysqli_fetch_assoc($result);
-		$row['contents'] = nl2br($row['contents']);
+		//$row['contents'] = nl2br($row['contents']);
 		$row['img'] = $this->image_exist($row['id']);
 		return $row;
 	}
@@ -94,9 +96,11 @@ class Model {
 		$sql = "update comment set contents='$newcomm' where id='$comment_id';";
 		$result = mysqli_query($connect, $sql) or die('error');
 		if($_FILES['image']['error'] == 0) {
+			$this->del_image($comment_id);
 			$this->image_upload($comment_id);
 		}
 		if($img_del) {
+			$this->del_image($comment_id);
 			$sql = "update comment set image='' where id='$comment_id';";
 			$result = mysqli_query($connect, $sql) or die('error');
 		}
@@ -111,6 +115,9 @@ class Model {
 		$board_del = FALSE;
 		$board_id = $this->cid_to_bid($id);
 		if($this->board_delcheck($board_id)) {
+			
+			$this->del_image($id);
+			
 			$sql = "delete from comment where id='$id';";
 			$result = mysqli_query($connect, $sql) or die('データを削除できませんでした。');
 		}
@@ -121,7 +128,19 @@ class Model {
 		return $board_del;
 	}
 	
+	//画像をimageフォルダから削除
+	public function del_image($comment_id) {
+		global $connect;
+		if($this->image_exist($comment_id)) {
+			$sql = "select image from comment where id='$comment_id';";
+			$result = mysqli_query($connect, $sql);
+			$row = mysqli_fetch_assoc($result);
+			$image = $row['image'];
+			unlink("image/$image");
+		}
+	}
 
+	
 	//トピック追加
 	public function addtopic($title, $contents, $del_key) {
 		global $connect;
@@ -160,7 +179,18 @@ class Model {
 	//トピック削除
 	public function del_topic($board_id) {
 		global $connect;
-
+		
+		$sql = "select id from comment where board_id='$board_id' and image not in('');";
+		$result = mysqli_query($connect, $sql);
+		while($row = mysqli_fetch_assoc($result)) {
+			$images[] = $row['id'];
+		}
+		if($images != NULL) {
+			foreach ($images as $image_id) {
+				$this->del_image($image_id);
+			}
+		}
+		
 		//$sql = "delete board, comment from board, comment where board.id='$board_id' and comment.board_id='$board_id';";
 		$sql = "delete from board where id='$board_id';";
 		$result = mysqli_query($connect, $sql) or die('error(board_delete)');
@@ -174,7 +204,8 @@ class Model {
 		$sql = "select id, title, last_updated from board order by last_updated desc;";
 		$result = mysqli_query($connect, $sql) or die('error');
 		
-		while($row = mysqli_fetch_array($result)) {
+		//while($row = mysqli_fetch_array($result)) {
+		while($row = mysqli_fetch_assoc($result)) {
 			$row['title'] = $this->ngword_translate($row['title']);
 			$board_id = $row['id'];
 			$sql = "select count(board_id) from comment where board_id='$board_id';";
@@ -183,6 +214,7 @@ class Model {
 			$row['count'] = $count[0];
 			$boards[] = $row;
 		}
+		if($boards == NULL) { $boards = array(); }
 		return $boards;
 	}
 
@@ -450,24 +482,23 @@ class Model {
 	
 	public function newupdate_check() {
 		global $connect;
-		$time = new_time;
+		$newtime = new_time;
 		
 		//$sql = "select id from board where timediff(now(), last_updated)<='$time:00:00'";
-		$sql = "select id, title, timediff(now(), last_updated) as time from board;";
+		$sql = "select id, timediff(now(), last_updated) as time from board;";
 		$result = mysqli_query($connect, $sql);
 		
 		while($row = mysqli_fetch_assoc($result)) {
-			if($time >= str_replace(':', '', $row['time'])) {
-				//$ids[] = $row['id'];
+			$board_updatetime = str_replace(':', '', $row['time']);
+			if($newtime >= $board_updatetime) {
+				
 				$rows[] = $row['id'];
-				$rows[] = $row['time'];
 			}
-			$ids[] = $rows;
 		}
-		if($ids == NULL) {
-			$ids = array();
+		if($rows == NULL) {
+			$rows = array();
 		}
-		return $ids;
+		return $rows;
 	}
 	
 }
